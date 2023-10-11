@@ -43,6 +43,7 @@ jobs:
       container-registry-user: ${{ vars.HARBOR_USER }}
       container-registry-project: ${{ vars.HARBOR_PROJECT }}
       container-registry-repo: airflow/base
+      release-tag-format: 'base-${version}'
       slack-channel: ${{ vars.SLACK_CHANNEL }}
       build-command: |
         docker build -t $IMAGE -f containers/airflow/base/Dockerfile .
@@ -61,6 +62,7 @@ jobs:
       container-registry-user: ${{ vars.HARBOR_USER }}
       container-registry-project: ${{ vars.HARBOR_PROJECT }}
       container-registry-repo: airflow/dags
+      release-tag-format: 'dags-${version}'
       slack-channel: ${{ vars.SLACK_CHANNEL }}
       build-command: |
         docker build -t $IMAGE -f containers/airflow/dags/Dockerfile .
