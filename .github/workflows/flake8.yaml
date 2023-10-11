@@ -17,8 +17,9 @@ concurrency:
 
 jobs:
   flake8:
-    runs-on: [self-hosted, linux, x64]
-    group: light
+    runs-on:
+      labels: [self-hosted, linux, x64]
+      group: light
     
     steps:
       - name: clone repo
