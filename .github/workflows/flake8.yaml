@@ -1,0 +1,45 @@
+name: Flake8
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+permissions:
+  # read on both needed for changes detection
+  pull-requests: read
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flake8:
+    runs-on: [self-hosted, linux, x64]
+    group: light
+    
+    steps:
+      - name: clone repo
+        uses: actions/checkout@v4
+        
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            src:
+              - 'dags/**.py'
+        
+      - name: install flake8
+        if: steps.changes.outputs.src == 'true'
+        run: pip install flake8
+        
+      - name: run flake8
+        if: steps.changes.outputs.src == 'true'
+        uses: rbialon/flake8-annotations@v1
+          
+      - name: run flake8
+        if: steps.changes.outputs.src == 'true'
+        run: |
+          flake8 dags
