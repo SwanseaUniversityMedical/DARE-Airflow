@@ -108,7 +108,10 @@ with DAG(
         field: pyarrow.lib.Field
         minio_schema = [
             (
-                field.name,
+                #TODO repalce this replace() call with a regex that maps any
+                #     sequence of one or more invalid characters to a single
+                #     underscore
+                field.name.replace(".", "_"),
                 dtype_map.get(str(field.type).upper(), str(field.type).upper())
             )
             for field in schema
