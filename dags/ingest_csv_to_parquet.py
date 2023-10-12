@@ -123,19 +123,19 @@ with DAG(
 
         logger.info(f"hive table schema={minio_schema_str}")
 
-        minio_name = f"{event['file_name']}_{dag_hash}"
+        table_name = f"{event['file_name']}_{dag_hash}"
 
-        logger.info(f"hive table name={minio_schema_str}")
+        logger.info(f"table name={minio_schema_str}")
 
         # make a hive table pointing at csv in external location
         trino_execute_query(trino_engine, '''
         CREATE TABLE minio.load.{0} (
             {1}
         ) with (
-            external_location = 's3a://{2}/',
+            external_location = 's3a://{0}/',
             format = 'CSV'
         )
-        '''.format(minio_name, minio_schema_str, event['head_path']))
+        '''.format(table_name, minio_schema_str))
 
         # make schema to read the parquet/iceberg files to
         trino_execute_query(trino_engine, '''
@@ -173,17 +173,17 @@ with DAG(
         # SELECT FROM the hive table into the iceberg table
         trino_execute_query(trino_engine, '''
         CREATE TABLE iceberg.sail.{0} WITH (
-            location = 's3a://working/{1}/',
+            location = 's3a://working/{0}/',
             format = 'PARQUET'
             )
         AS
-            SELECT {2} FROM minio.load.{0}
-        '''.format(event['file_name'], event['head_path'], iceberg_schema_str))
+            SELECT {1} FROM minio.load.{0}
+        '''.format(table_name, iceberg_schema_str))
 
         # cleanup the hive table
         trino_execute_query(trino_engine, '''
         DROP TABLE minio.load.{0}
-        '''.format(minio_name))
+        '''.format(table_name))
 
     consume_events = RabbitMQPythonOperator(
         func=process_event,
