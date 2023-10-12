@@ -92,7 +92,7 @@ with DAG(
             use_ssl=False
         )
 
-        with fs.open(event['head_path'], "r") as fp:
+        with fs.open(event['full_file_path'], "r") as fp:
             schema = pl.scan_csv(fp).schema
 
         logger.info(f"schema={schema}")
