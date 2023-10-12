@@ -86,7 +86,7 @@ with DAG(
         s3_conn = json.loads(BaseHook.get_connection("s3_conn").get_extra())
 
         fs = s3fs.S3FileSystem(
-            endpoint_url=s3_conn["endpoint"],
+            endpoint_url=s3_conn["endpoint_url"],
             key=s3_conn["aws_access_key_id"],
             secret=s3_conn["aws_secret_access_key"],
             use_ssl=False
