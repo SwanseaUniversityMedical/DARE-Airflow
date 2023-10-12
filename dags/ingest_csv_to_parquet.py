@@ -9,6 +9,34 @@ from modules.providers.operators.rabbitmq import RabbitMQPythonOperator
 
 logger = logging.getLogger(__name__)
 
+
+def unpack_minio_event(message):
+    import json
+
+    logger.info("Decoding minio event as JSON")
+    message_json = json.loads(message)
+
+    records = message_json["Records"][0]
+
+    s3_object = records["s3"]["object"]
+
+    user = records["userIdentity"]["principalId"]
+    bucket = records["s3"]["bucket"]["name"]
+    etag = s3_object["eTag"]
+
+    src_file_path: str = s3_object["key"]
+    assert src_file_path.endswith(".csv")
+
+    file_name = src_file_path.rstrip(".csv")
+
+    return dict(
+        user=user,
+        bucket=bucket,
+        src_file_path=src_file_path,
+        etag=etag,
+        file_name=file_name
+    )
+
 with DAG(
     dag_id="ingest_csv_to_parquet",
     schedule=None,
@@ -21,7 +49,10 @@ with DAG(
 
     def process_event(message):
         logger.info("Processing message!")
-        logger.debug(f"message={message}")
+        logger.info(f"message={message}")
+
+        event = unpack_minio_event(message)
+        logger.info(f"event={event}")
 
     consume_events = RabbitMQPythonOperator(
         func=process_event,
