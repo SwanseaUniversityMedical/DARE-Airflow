@@ -7,7 +7,7 @@ from airflow.utils.trigger_rule import TriggerRule
 
 from modules.providers.operators.rabbitmq import RabbitMQPythonOperator
 from modules.nrda.utils.databases.trino import get_trino_engine, get_trino_conn_details, \
-    trino_create_schema, trino_create_table_from_external_parquet_file, trino_copy_table_to_iceberg
+    trino_create_schema, trino_create_table_from_external_parquet_file, trino_copy_table_to_iceberg, trino_execute_query
 
 logger = logging.getLogger(__name__)
 
