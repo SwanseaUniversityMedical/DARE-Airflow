@@ -1,13 +1,16 @@
 import datetime
 import logging
 import pendulum
+import json
+import polars as pl
+
 from airflow import DAG
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.utils.trigger_rule import TriggerRule
+from airflow.hooks.base import BaseHook
 
 from modules.providers.operators.rabbitmq import RabbitMQPythonOperator
-from modules.nrda.utils.databases.trino import get_trino_engine, get_trino_conn_details, \
-    trino_create_schema, trino_create_table_from_external_parquet_file, trino_copy_table_to_iceberg, trino_execute_query
+from modules.databases.trino import get_trino_engine, get_trino_conn_details, trino_execute_query
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +70,14 @@ with DAG(
         # make schema to read the csv files to
         q = '''create schema if not exists minio.load with (location='s3a://loading/')'''
         trino_execute_query(trino_engine, q)
+
+        # lazily compute csv schema directly from s3
+        s3_conn = json.loads(BaseHook.get_connection("s3_conn").get_extra())
+        schema = pl.scan_csv("s3://{0}".format(event['head_path']), storage_options={
+            "aws_access_key_id": s3_conn["aws_access_key_id"],
+            "aws_secret_access_key": s3_conn["aws_secret_access_key"]
+        }).schema
+        logger.info(f"schema={schema}")
 
         # make a table pointing at csv in external location
         q = '''
