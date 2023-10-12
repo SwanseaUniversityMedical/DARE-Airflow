@@ -28,7 +28,7 @@ class RabbitMQTrigger(BaseTrigger):
         Serialize RabbitMQTrigger arguments and classpath.
         """
         return (
-            "modules.nrda.providers.triggers.rabbitmq.RabbitMQTrigger",
+            "modules.providers.triggers.rabbitmq.RabbitMQTrigger",
             {
                 "queue_name": self.queue_name,
                 "rabbitmq_conn_id": self.rabbitmq_conn_id,
