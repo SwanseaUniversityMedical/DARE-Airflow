@@ -3,7 +3,7 @@ import logging
 import pendulum
 import json
 import s3fs
-import polars as pl
+import pyarrow.csv as pcsv
 
 from airflow import DAG
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
@@ -93,7 +93,7 @@ with DAG(
         )
 
         with fs.open(event['full_file_path'], "r") as fp:
-            schema = pl.scan_csv(fp).schema
+            schema = pcsv.open_csv(fp).schema
 
         logger.info(f"schema={schema}")
 
