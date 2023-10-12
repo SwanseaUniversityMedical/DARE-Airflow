@@ -6,6 +6,8 @@ from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.utils.trigger_rule import TriggerRule
 
 from modules.providers.operators.rabbitmq import RabbitMQPythonOperator
+from modules.nrda.utils.databases.trino import get_trino_engine, get_trino_conn_details, \
+    trino_create_schema, trino_create_table_from_external_parquet_file, trino_copy_table_to_iceberg
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +31,17 @@ def unpack_minio_event(message):
 
     file_name = src_file_path.rstrip(".csv")
 
+    full_file_path = message_json['Key']
+    head_path = '/'.join(full_file_path.split('/')[:-1])
+
     return dict(
         user=user,
         bucket=bucket,
         src_file_path=src_file_path,
         etag=etag,
-        file_name=file_name
+        file_name=file_name,
+        full_file_path=full_file_path,
+        head_path=head_path
     )
 
 with DAG(
@@ -53,6 +60,44 @@ with DAG(
 
         event = unpack_minio_event(message)
         logger.info(f"event={event}")
+
+        trino_conn = get_trino_conn_details()
+        trino_engine = get_trino_engine(trino_conn)
+
+        # make schema to read the csv files to
+        q = '''create schema if not exists minio.load with (location='s3a://loading/')'''
+        trino_execute_query(trino_engine, q)
+
+        # make a table pointing at csv in external location
+        q = '''
+        CREATE TABLE minio.load.{0} (
+            sepal.length double,
+            sepal.width double,
+            petal.length double,
+            petal.width double,
+            variety varchar
+        ) with (
+            external_location = 's3a://{1}/',
+            format = 'CSV'
+        );
+        '''.format(event['file_name'], event['head_path'])
+        trino_execute_query(trino_engine, q)
+
+        # make schema to read the parquet/iceberg files to
+        q = '''create schema if not exists iceberg.sail with (location='s3a://working/')'''
+        trino_execute_query(trino_engine, q)
+
+        # SELECT FROM this table into the new one
+        q = '''
+        CREATE TABLE iceberg.sail.{0} WITH (
+            location = 's3a://working/{1}/',
+            format = 'PARQUET'
+            )
+        AS
+            SELECT * 
+            FROM minio.load.{0}
+        '''.format(event['file_name'], event['head_path'])
+        trino_execute_query(trino_engine, q)
 
     consume_events = RabbitMQPythonOperator(
         func=process_event,
