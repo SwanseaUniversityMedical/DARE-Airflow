@@ -93,7 +93,7 @@ with DAG(
         )
 
         with fs.open(event['full_file_path'], "rb") as fp:
-            schema = pcsv.open_csv(fp).schema.get_json()
+            schema = pcsv.open_csv(fp).schema
 
         logger.info(f"schema={schema}")
 
@@ -105,10 +105,10 @@ with DAG(
         # dtype is remapped if it is in the dtype_map
         minio_schema = [
             (
-                field["name"],
-                dtype_map.get(field["type"].upper(), field["type"].upper())
+                field.name,
+                dtype_map.get(str(field.val['type_']).upper(), str(field.val['type_']).upper())
             )
-            for field in schema["fields"]
+            for field in schema.fields
         ]
 
         logger.info(f"schema json={schema}")
