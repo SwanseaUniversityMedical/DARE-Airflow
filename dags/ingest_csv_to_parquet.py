@@ -79,7 +79,12 @@ with DAG(
 
         context = get_current_context()
         ti = context['ti']
-        dag_hash = sha1(f"dag_id={ti.dag_id}/run_id={ti.run_id}/task_id={ti.task_id}/try_number={ti.try_number}")
+        dag_hash = sha1(
+            f"dag_id={ti.dag_id}/"
+            f"run_id={ti.run_id}/"
+            f"task_id={ti.task_id}/"
+            f"try_number={ti.try_number}"
+        )
 
         event = unpack_minio_event(message)
         logger.info(f"event={event}")
@@ -111,28 +116,9 @@ with DAG(
 
         logger.info(f"schema={schema}")
 
-        # convert the pyarrow schema to a hive sql schema
-        dtype_map = {
-            "STRING": "VARCHAR"
-        }
-
-        # create a list of tuples of (name, dtype)
-        # dtype is remapped if it is in the dtype_map
-        field: pyarrow.lib.Field
-        minio_schema = [
-            (
-                #TODO repalce this replace() call with a regex that maps any
-                #     sequence of one or more invalid characters to a single
-                #     underscore
-                field.name.replace(".", "_"),
-                dtype_map.get(str(field.type).upper(), str(field.type).upper())
-            )
-            for field in schema
-        ]
-
         # format the schema as sql
         minio_schema_str = ', '.join(
-            map(lambda field: ' '.join(field), minio_schema)
+            map(lambda field: f"{field.name.replace('.', '_')} VARCHAR", schema)
         )
 
         logger.info(f"hive table schema={minio_schema_str}")
@@ -159,6 +145,31 @@ with DAG(
             location='s3a://working/'
         )''')
 
+        # convert the pyarrow schema to a hive sql schema
+        dtype_map = {
+            "STRING": "VARCHAR"
+        }
+
+        # create a list of tuples of (name, dtype)
+        # dtype is remapped if it is in the dtype_map
+        field: pyarrow.lib.Field
+        iceberg_schema = [
+            (
+                # TODO repalce this replace() call with a regex that maps any
+                #     sequence of one or more invalid characters to a single
+                #     underscore
+                field.name.replace(".", "_"),
+                dtype_map.get(str(field.type).upper(), str(field.type).upper())
+            )
+            for field in schema
+        ]
+
+        # format the schema as sql
+        iceberg_schema_str = ', '.join(
+            [f"CAST({name} AS {dtype}) AS {name}"
+             for name, dtype in iceberg_schema]
+        )
+
         # SELECT FROM the hive table into the iceberg table
         trino_execute_query(trino_engine, '''
         CREATE TABLE iceberg.sail.{0} WITH (
@@ -166,9 +177,8 @@ with DAG(
             format = 'PARQUET'
             )
         AS
-            SELECT * 
-            FROM minio.load.{0}
-        '''.format(event['file_name'], event['head_path']))
+            SELECT {2} FROM minio.load.{0}
+        '''.format(event['file_name'], event['head_path'], iceberg_schema_str))
 
         # cleanup the hive table
         trino_execute_query(trino_engine, '''
