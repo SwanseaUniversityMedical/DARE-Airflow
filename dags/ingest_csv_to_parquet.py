@@ -2,6 +2,8 @@ import datetime
 import logging
 import pendulum
 import json
+
+import pyarrow
 import s3fs
 import pyarrow.csv as pcsv
 
@@ -93,7 +95,7 @@ with DAG(
         )
 
         with fs.open(event['full_file_path'], "rb") as fp:
-            schema = pcsv.open_csv(fp).schema
+            schema: pyarrow.lib.Schema = pcsv.open_csv(fp).schema
 
         logger.info(f"schema={schema}")
 
@@ -103,20 +105,21 @@ with DAG(
 
         # create a list of tuples of (name, dtype)
         # dtype is remapped if it is in the dtype_map
+        field: pyarrow.lib.Field
         minio_schema = [
             (
                 field.name,
-                dtype_map.get(str(field.val['type_']).upper(), str(field.val['type_']).upper())
+                dtype_map.get(str(field.type).upper(), str(field.type).upper())
             )
-            for field in schema.fields
+            for field in schema
         ]
 
-        logger.info(f"schema json={schema}")
+        logger.info(f"schema json={minio_schema}")
 
         # format the schema as sql
         minio_schema_str = ', '.join(map(lambda field: ' '.join(field), minio_schema))
 
-        logger.info(f"schema str={schema}")
+        logger.info(f"schema str={minio_schema_str}")
 
         # make a table pointing at csv in external location
         trino_execute_query(trino_engine, '''
