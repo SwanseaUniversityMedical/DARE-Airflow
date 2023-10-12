@@ -2,6 +2,7 @@ import datetime
 import logging
 import pendulum
 import json
+import s3fs
 import polars as pl
 
 from airflow import DAG
@@ -10,7 +11,11 @@ from airflow.utils.trigger_rule import TriggerRule
 from airflow.hooks.base import BaseHook
 
 from modules.providers.operators.rabbitmq import RabbitMQPythonOperator
-from modules.databases.trino import get_trino_engine, get_trino_conn_details, trino_execute_query
+from modules.databases.trino import (
+    get_trino_engine,
+    get_trino_conn_details,
+    trino_execute_query
+)
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +52,7 @@ def unpack_minio_event(message):
         head_path=head_path
     )
 
+
 with DAG(
     dag_id="ingest_csv_to_parquet",
     schedule=None,
@@ -68,19 +74,31 @@ with DAG(
         trino_engine = get_trino_engine(trino_conn)
 
         # make schema to read the csv files to
-        q = '''create schema if not exists minio.load with (location='s3a://loading/')'''
-        trino_execute_query(trino_engine, q)
+        trino_execute_query(trino_engine, '''
+        CREATE SCHEMA IF NOT EXISTS 
+        minio.load 
+        WITH (
+            location='s3a://loading/'
+        )
+        ''')
 
         # lazily compute csv schema directly from s3
         s3_conn = json.loads(BaseHook.get_connection("s3_conn").get_extra())
-        schema = pl.scan_csv("s3://{0}".format(event['head_path']), storage_options={
-            "aws_access_key_id": s3_conn["aws_access_key_id"],
-            "aws_secret_access_key": s3_conn["aws_secret_access_key"]
-        }).schema
+
+        fs = s3fs.S3FileSystem(
+            endpoint_url=s3_conn["endpoint"],
+            key=s3_conn["aws_access_key_id"],
+            secret=s3_conn["aws_secret_access_key"],
+            use_ssl=False
+        )
+
+        with fs.open(event['head_path'], "r") as fp:
+            schema = pl.scan_csv(fp).schema
+
         logger.info(f"schema={schema}")
 
         # make a table pointing at csv in external location
-        q = '''
+        trino_execute_query(trino_engine, '''
         CREATE TABLE minio.load.{0} (
             sepal_length varchar,
             sepal_width varchar,
@@ -91,8 +109,7 @@ with DAG(
             external_location = 's3a://{1}/',
             format = 'CSV'
         )
-        '''.format(event['file_name'], event['head_path'])
-        trino_execute_query(trino_engine, q)
+        '''.format(event['file_name'], event['head_path']))
 
         # make schema to read the parquet/iceberg files to
         q = '''create schema if not exists iceberg.sail with (location='s3a://working/')'''
