@@ -79,7 +79,7 @@ with DAG(
         ) with (
             external_location = 's3a://{1}/',
             format = 'CSV'
-        );
+        )
         '''.format(event['file_name'], event['head_path'])
         trino_execute_query(trino_engine, q)
 
