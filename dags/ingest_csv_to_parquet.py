@@ -71,10 +71,10 @@ with DAG(
         # make a table pointing at csv in external location
         q = '''
         CREATE TABLE minio.load.{0} (
-            sepal_length double,
-            sepal_width double,
-            petal_length double,
-            petal_width double,
+            sepal_length varchar,
+            sepal_width varchar,
+            petal_length varchar,
+            petal_width varchar,
             variety varchar
         ) with (
             external_location = 's3a://{1}/',
