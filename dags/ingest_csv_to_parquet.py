@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import logging
 import pendulum
 import json
@@ -11,6 +12,7 @@ from airflow import DAG
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.hooks.base import BaseHook
+from airflow.operators.python import get_current_context
 
 from modules.providers.operators.rabbitmq import RabbitMQPythonOperator
 from modules.databases.trino import (
@@ -55,6 +57,12 @@ def unpack_minio_event(message):
     )
 
 
+def sha1(value):
+    sha_1 = hashlib.sha1()
+    sha_1.update(str(value).encode('utf-8'))
+    return sha_1.hexdigest()
+
+
 with DAG(
     dag_id="ingest_csv_to_parquet",
     schedule=None,
@@ -69,6 +77,10 @@ with DAG(
         logger.info("Processing message!")
         logger.info(f"message={message}")
 
+        context = get_current_context()
+        ti = context['ti']
+        dag_hash = sha1(f"dag_id={ti.dag_id}/run_id={ti.run_id}/task_id={ti.task_id}/try_number={ti.try_number}")
+
         event = unpack_minio_event(message)
         logger.info(f"event={event}")
 
@@ -78,7 +90,7 @@ with DAG(
         # make schema to read the csv files to
         trino_execute_query(trino_engine, '''
         CREATE SCHEMA IF NOT EXISTS 
-        minio.load 
+            minio.load 
         WITH (
             location='s3a://loading/'
         )
@@ -99,6 +111,7 @@ with DAG(
 
         logger.info(f"schema={schema}")
 
+        # convert the pyarrow schema to a hive sql schema
         dtype_map = {
             "STRING": "VARCHAR"
         }
@@ -117,29 +130,37 @@ with DAG(
             for field in schema
         ]
 
-        logger.info(f"schema json={minio_schema}")
-
         # format the schema as sql
-        minio_schema_str = ', '.join(map(lambda field: ' '.join(field), minio_schema))
+        minio_schema_str = ', '.join(
+            map(lambda field: ' '.join(field), minio_schema)
+        )
 
-        logger.info(f"schema str={minio_schema_str}")
+        logger.info(f"hive table schema={minio_schema_str}")
 
-        # make a table pointing at csv in external location
+        minio_name = f"{event['file_name']}_{dag_hash}"
+
+        logger.info(f"hive table name={minio_schema_str}")
+
+        # make a hive table pointing at csv in external location
         trino_execute_query(trino_engine, '''
         CREATE TABLE minio.load.{0} (
-            {2}
+            {1}
         ) with (
-            external_location = 's3a://{1}/',
+            external_location = 's3a://{2}/',
             format = 'CSV'
         )
-        '''.format(event['file_name'], event['head_path'], minio_schema_str))
+        '''.format(minio_name, minio_schema_str, event['head_path']))
 
         # make schema to read the parquet/iceberg files to
-        q = '''create schema if not exists iceberg.sail with (location='s3a://working/')'''
-        trino_execute_query(trino_engine, q)
+        trino_execute_query(trino_engine, '''
+        CREATE SCHEMA IF NOT EXISTS 
+            iceberg.sail 
+        WITH (
+            location='s3a://working/'
+        )''')
 
-        # SELECT FROM this table into the new one
-        q = '''
+        # SELECT FROM the hive table into the iceberg table
+        trino_execute_query(trino_engine, '''
         CREATE TABLE iceberg.sail.{0} WITH (
             location = 's3a://working/{1}/',
             format = 'PARQUET'
@@ -147,8 +168,12 @@ with DAG(
         AS
             SELECT * 
             FROM minio.load.{0}
-        '''.format(event['file_name'], event['head_path'])
-        trino_execute_query(trino_engine, q)
+        '''.format(event['file_name'], event['head_path']))
+
+        # cleanup the hive table
+        trino_execute_query(trino_engine, '''
+        DELETE TABLE minio.load.{0}
+        '''.format(minio_name))
 
     consume_events = RabbitMQPythonOperator(
         func=process_event,
