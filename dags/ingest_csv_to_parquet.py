@@ -93,23 +93,40 @@ with DAG(
         )
 
         with fs.open(event['full_file_path'], "rb") as fp:
-            schema = pcsv.open_csv(fp).schema
+            schema = pcsv.open_csv(fp).schema.get_json()
 
         logger.info(f"schema={schema}")
+
+        dtype_map = {
+            "STRING": "VARCHAR"
+        }
+
+        # create a list of tuples of (name, dtype)
+        # dtype is remapped if it is in the dtype_map
+        minio_schema = [
+            (
+                field["name"],
+                dtype_map.get(field["type"].upper(), field["type"].upper())
+            )
+            for field in schema["fields"]
+        ]
+
+        logger.info(f"schema json={schema}")
+
+        # format the schema as sql
+        minio_schema_str = ', '.join(map(lambda field: ' '.join(field), minio_schema))
+
+        logger.info(f"schema str={schema}")
 
         # make a table pointing at csv in external location
         trino_execute_query(trino_engine, '''
         CREATE TABLE minio.load.{0} (
-            sepal_length varchar,
-            sepal_width varchar,
-            petal_length varchar,
-            petal_width varchar,
-            variety varchar
+            {2}
         ) with (
             external_location = 's3a://{1}/',
             format = 'CSV'
         )
-        '''.format(event['file_name'], event['head_path']))
+        '''.format(event['file_name'], event['head_path'], minio_schema_str))
 
         # make schema to read the parquet/iceberg files to
         q = '''create schema if not exists iceberg.sail with (location='s3a://working/')'''
