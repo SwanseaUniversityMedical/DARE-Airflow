@@ -172,7 +172,7 @@ with DAG(
 
         # cleanup the hive table
         trino_execute_query(trino_engine, '''
-        DELETE TABLE minio.load.{0}
+        DROP TABLE minio.load.{0}
         '''.format(minio_name))
 
     consume_events = RabbitMQPythonOperator(
