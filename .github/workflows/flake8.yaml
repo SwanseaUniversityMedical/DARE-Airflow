@@ -43,4 +43,4 @@ jobs:
       - name: run flake8
         if: steps.changes.outputs.src == 'true'
         run: |
-          flake8 dags
+          flake8 --max-complexity 10 --ignore E501 dags
