@@ -132,11 +132,13 @@ with DAG(
         logger.info(f"hive table name={hive_table_name}")
 
         # make a hive table pointing at csv in external location
+        # TODO handle header and separator more robustly
         trino_execute_query(trino_engine, '''
         CREATE TABLE minio.load.{0} (
             {1}
         ) with (
             external_location = 's3a://{2}',
+            skip_header_line_count = 1,
             format = 'CSV'
         )
         '''.format(hive_table_name, hive_schema_str, event['head_path']))
