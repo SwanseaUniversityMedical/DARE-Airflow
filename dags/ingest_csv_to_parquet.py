@@ -139,7 +139,7 @@ with DAG(
             external_location = 's3a://{2}',
             format = 'CSV'
         )
-        '''.format(hive_table_name, hive_schema_str, event['full_file_path']))
+        '''.format(hive_table_name, hive_schema_str, event['head_path']))
 
         # make schema to read the parquet/iceberg files to
         trino_execute_query(trino_engine, '''
