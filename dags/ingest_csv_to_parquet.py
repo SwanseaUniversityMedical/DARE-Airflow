@@ -95,8 +95,8 @@ with DAG(
         # location is not actually used since tables will be created
         # with external_location
         trino_execute_query(trino_engine, '''
-        CREATE SCHEMA IF NOT EXISTS 
-            minio.load 
+        CREATE SCHEMA IF NOT EXISTS
+            minio.load
         WITH (
             location='s3a://loading/'
         )
@@ -143,21 +143,20 @@ with DAG(
 
         # make schema to read the parquet/iceberg files to
         trino_execute_query(trino_engine, '''
-        CREATE SCHEMA IF NOT EXISTS 
-            iceberg.sail 
+        CREATE SCHEMA IF NOT EXISTS
+            iceberg.sail
         WITH (
             location='s3a://working/'
         )''')
 
         # convert the pyarrow schema to a hive sql schema
-        #TODO add other iceberg datatypes
+        # TODO add other iceberg datatypes
         dtype_map = {
             "STRING": "VARCHAR"
         }
 
         # create a list of tuples of (name, dtype)
         # dtype is remapped if it is in the dtype_map
-        field: pyarrow.lib.Field
         iceberg_schema = [
             (
                 re.sub(r'[^a-zA-Z0-9]', '_', field.name).strip().strip('_').strip(),
@@ -177,8 +176,8 @@ with DAG(
         logger.info(f"iceberg table name={iceberg_table_name}")
 
         # clear current table if it exists
-        #TODO handle this safely, we should be ingesting into a holding table
-        #     before running a GE and DBT pipeline to merge it with existing data
+        # TODO handle this safely, we should be ingesting into a holding table
+        # before running a GE and DBT pipeline to merge it with existing data
         trino_execute_query(trino_engine, '''
         DROP TABLE IF EXISTS iceberg.sail.{0}
         '''.format(iceberg_table_name))
