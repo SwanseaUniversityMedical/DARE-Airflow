@@ -189,8 +189,8 @@ with DAG(
             format = 'PARQUET'
             )
         AS
-            SELECT {1} FROM minio.load.{0}
-        '''.format(iceberg_table_name, iceberg_schema_str))
+            SELECT {1} FROM minio.load.{2}
+        '''.format(iceberg_table_name, iceberg_schema_str, hive_table_name))
 
         # cleanup the hive table
         trino_execute_query(trino_engine, '''
