@@ -3,7 +3,7 @@ import hashlib
 import logging
 import pendulum
 import json
-
+import re
 import pyarrow
 import s3fs
 import pyarrow.csv as pcsv
@@ -82,8 +82,7 @@ with DAG(
         dag_hash = sha1(
             f"dag_id={ti.dag_id}/"
             f"run_id={ti.run_id}/"
-            f"task_id={ti.task_id}/"
-            f"try_number={ti.try_number}"
+            f"task_id={ti.task_id}"
         )
 
         event = unpack_minio_event(message)
@@ -93,6 +92,8 @@ with DAG(
         trino_engine = get_trino_engine(trino_conn)
 
         # make schema to read the csv files to
+        # location is not actually used since tables will be created
+        # with external_location
         trino_execute_query(trino_engine, '''
         CREATE SCHEMA IF NOT EXISTS 
             minio.load 
@@ -117,25 +118,28 @@ with DAG(
         logger.info(f"schema={schema}")
 
         # format the schema as sql
-        minio_schema_str = ', '.join(
-            map(lambda field: f"{field.name.replace('.', '_')} VARCHAR", schema)
+        # hive connector enforces VARCHAR when backed by csv files in bucket
+        # we'll cast the columns to the inferred schema when going to iceberg
+        hive_schema_str = ', '.join(
+            map(lambda field: f"{re.sub(r'[^a-zA-Z0-9]', '_', field.name).strip().strip('_').strip()} VARCHAR", schema)
         )
+        logger.info(f"hive table schema={hive_schema_str}")
 
-        logger.info(f"hive table schema={minio_schema_str}")
+        table_name = re.sub(r"[^a-zA-Z0-9]", '_', event['file_name']).strip().strip('_').strip()
+        logger.info(f"table name={table_name}")
 
-        table_name = f"{event['file_name']}_{dag_hash}"
-
-        logger.info(f"table name={minio_schema_str}")
+        hive_table_name = f"{table_name}_{dag_hash}_{ti.try_number}"
+        logger.info(f"hive table name={hive_table_name}")
 
         # make a hive table pointing at csv in external location
         trino_execute_query(trino_engine, '''
         CREATE TABLE minio.load.{0} (
             {1}
         ) with (
-            external_location = 's3a://{0}/',
+            external_location = 's3a://{2}',
             format = 'CSV'
         )
-        '''.format(table_name, minio_schema_str))
+        '''.format(hive_table_name, hive_schema_str, event['full_file_path']))
 
         # make schema to read the parquet/iceberg files to
         trino_execute_query(trino_engine, '''
@@ -155,20 +159,27 @@ with DAG(
         field: pyarrow.lib.Field
         iceberg_schema = [
             (
-                # TODO repalce this replace() call with a regex that maps any
-                #     sequence of one or more invalid characters to a single
-                #     underscore
-                field.name.replace(".", "_"),
+                re.sub(r'[^a-zA-Z0-9]', '_', field.name).strip().strip('_').strip(),
                 dtype_map.get(str(field.type).upper(), str(field.type).upper())
             )
             for field in schema
         ]
 
-        # format the schema as sql
+        # format the schema as sql for column-wise cast from hive table
         iceberg_schema_str = ', '.join(
             [f"CAST({name} AS {dtype}) AS {name}"
              for name, dtype in iceberg_schema]
         )
+        logger.info(f"iceberg table schema={iceberg_schema_str}")
+
+        iceberg_table_name = table_name
+        logger.info(f"iceberg table name={iceberg_table_name}")
+
+        # clear current table if it exists
+        #TODO handle this safely
+        trino_execute_query(trino_engine, '''
+        DROP TABLE iceberg.sail.{0} IF EXISTS
+        '''.format(iceberg_table_name))
 
         # SELECT FROM the hive table into the iceberg table
         trino_execute_query(trino_engine, '''
@@ -178,12 +189,12 @@ with DAG(
             )
         AS
             SELECT {1} FROM minio.load.{0}
-        '''.format(table_name, iceberg_schema_str))
+        '''.format(iceberg_table_name, iceberg_schema_str))
 
         # cleanup the hive table
         trino_execute_query(trino_engine, '''
         DROP TABLE minio.load.{0}
-        '''.format(table_name))
+        '''.format(hive_table_name))
 
     consume_events = RabbitMQPythonOperator(
         func=process_event,
