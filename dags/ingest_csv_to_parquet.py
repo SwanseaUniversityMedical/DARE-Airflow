@@ -150,6 +150,7 @@ with DAG(
         )''')
 
         # convert the pyarrow schema to a hive sql schema
+        #TODO add other iceberg datatypes
         dtype_map = {
             "STRING": "VARCHAR"
         }
@@ -176,9 +177,10 @@ with DAG(
         logger.info(f"iceberg table name={iceberg_table_name}")
 
         # clear current table if it exists
-        #TODO handle this safely
+        #TODO handle this safely, we should be ingesting into a holding table
+        #     before running a GE and DBT pipeline to merge it with existing data
         trino_execute_query(trino_engine, '''
-        DROP TABLE iceberg.sail.{0} IF EXISTS
+        DROP TABLE IF EXISTS iceberg.sail.{0}
         '''.format(iceberg_table_name))
 
         # SELECT FROM the hive table into the iceberg table
@@ -193,7 +195,7 @@ with DAG(
 
         # cleanup the hive table
         trino_execute_query(trino_engine, '''
-        DROP TABLE minio.load.{0}
+        DROP TABLE IF EXISTS minio.load.{0}
         '''.format(hive_table_name))
 
     consume_events = RabbitMQPythonOperator(
