@@ -38,12 +38,11 @@ def unpack_minio_event(message):
     bucket = records["s3"]["bucket"]["name"]
     etag = s3_object["eTag"]
 
-    src_file_path: str = s3_object["key"]
+    src_file_path: str = s3_object["key"].replace('%2F', '/')
     assert src_file_path.endswith(".csv")
 
-    file_name = src_file_path.replace(".csv", "").replace('%2F', '_')
-
-    dir_name = file_name.split("/")[0]
+    file_name = src_file_path.replace(".csv", "")
+    dir_name = src_file_path.split("/")[0]
 
     full_file_path = message_json['Key']
     head_path = '/'.join(full_file_path.split('/')[:-1])
