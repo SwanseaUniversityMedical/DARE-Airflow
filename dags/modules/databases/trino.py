@@ -1,20 +1,14 @@
-"""Module controlling different methods to access and use trino.
 
-This module contains the methods to that will allow us to preform different actions on different databases that
-are being used in production.
-
-This file can be imported as a module and contains the following functions:
-
-    * get_trino_conn_details
-    * get_trino_engine
-    * trino_execute_query
-    * trino_copy_table_to_iceberg
-    * trino_create_schema
-    * trino_create_table_from_external_parquet_file
-    * trino_insert_values
-"""
+import re
+import json
 import logging
+
+import boto3
+import pandas as pd
+import s3fs
 import sqlalchemy.engine
+from airflow.hooks.base import BaseHook
+from botocore.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -72,13 +66,14 @@ def get_trino_engine(trino_conn_details: dict) -> sqlalchemy.engine.Engine:
             "http_scheme": "https",
             # TODO This needs to be set to true when deploying to anything thats not dev
             "verify": False
-        }
+        },
+        echo=True
     )
 
     return engine
 
 
-def trino_execute_query(engine: sqlalchemy.engine.Engine, query: str) -> None:
+def trino_execute_query(engine: sqlalchemy.engine.Engine, query: str, **kwargs) -> None:
     """Executes SQL based on a provided query.
     :param query: String for the SQL query that will be executed
     :param engine: SqlAlchemy engine object for communicating to a database
@@ -86,9 +81,123 @@ def trino_execute_query(engine: sqlalchemy.engine.Engine, query: str) -> None:
     try:
         logger.info("Trino query executing...")
         logger.debug(f"query={query}")
-        engine.execute(query)
+        engine.execute(query, **kwargs)
         logger.info("Trino query success!")
 
     except Exception as ex:
         logger.exception("Trino query encountered an error!", exc_info=ex)
         raise ex
+
+
+def escape_column(column):
+    return re.sub(r'[^a-zA-Z0-9]+', '_', column).strip("_")
+
+
+def validate_column(column):
+    assert column == escape_column(column)
+    return column
+
+
+def escape_dataset(dataset):
+    # TODO make this more sensible
+    return escape_column(dataset)
+
+def validate_identifier(identifier):
+    # Validate the identifier is strictly one or more dot separated identifiers
+    assert re.match(
+        r'^(?:[a-z](?:[_a-z0-9]*[a-z0-9]|[a-z0-9]*)'
+        r'(?:\.[a-z](?:[_a-z0-9]*[a-z0-9]|[a-z0-9]*)))*$',
+        identifier,
+        flags=re.IGNORECASE
+    )
+
+    return identifier
+
+
+def validate_s3_key(key):
+    # Validate the s3 key is strictly one or more slash separated keys
+    assert re.match(
+        r'^(?:[a-z0-9\-_]+)(?:/(?:[a-z0-9\-_]+))*$',
+        key,
+        flags=re.IGNORECASE
+    )
+
+    return key
+
+
+def create_schema(trino: sqlalchemy.engine.Engine, schema: str, location: str):
+    query = f"CREATE SCHEMA IF NOT EXISTS " \
+            f"{validate_identifier(schema)} " \
+            f"WITH (" \
+            f"location='s3a://{validate_s3_key(location)}'" \
+            f")"
+    trino.execute(query)
+
+
+def drop_schema(trino: sqlalchemy.engine.Engine, schema: str):
+    query = f"DROP SCHEMA " \
+            f"{validate_identifier(schema)}"
+    trino.execute(query)
+
+
+def hive_create_table_from_csv(trino: sqlalchemy.engine.Engine, table: str, columns: list, location: str):
+    schema = ", ".join(map(lambda col: f"{validate_column(col)} VARCHAR", columns))
+    query = f"CREATE TABLE " \
+            f"{validate_identifier(table)} ({schema}) " \
+            f"WITH (" \
+            f"external_location='s3a://{validate_s3_key(location)}', " \
+            f"skip_header_line_count=1, " \
+            f"format='CSV'" \
+            f")"
+    trino.execute(query)
+
+
+def iceberg_create_table_from_hive(trino: sqlalchemy.engine.Engine, table: str, hive_table: str, columns: list, location: str):
+    schema = ", ".join(map(lambda col: f"{validate_column(col)}", columns))
+    query = f"CREATE TABLE " \
+            f"{validate_identifier(table)} " \
+            f"WITH (" \
+            f"location='s3a://{validate_s3_key(location)}', " \
+            f"format='PARQUET'" \
+            f") " \
+            f"AS SELECT {schema} FROM {validate_identifier(hive_table)}"
+    trino.execute(query)
+
+
+def drop_table(trino: sqlalchemy.engine.Engine, table: str):
+    query = f"DROP TABLE " \
+            f"{validate_identifier(table)}"
+    trino.execute(query)
+
+
+def s3_get_csv_columns(conn_id: str, path: str, header=0, index_col=False) -> list:
+
+    s3_conn = json.loads(BaseHook.get_connection(conn_id).get_extra())
+
+    fs = s3fs.S3FileSystem(
+        endpoint_url=s3_conn["endpoint_url"],
+        key=s3_conn["aws_access_key_id"],
+        secret=s3_conn["aws_secret_access_key"],
+        use_ssl=False
+    )
+
+    with fs.open(path, "rb") as fp:
+        return pd.read_csv(fp, header=header, index_col=index_col, nrows=0).columns.tolist()
+
+
+def s3_copy(conn_id: str, src_bucket, dst_bucket, src_key, dst_key, move=False):
+
+    s3_conn = json.loads(BaseHook.get_connection(conn_id).get_extra())
+
+    s3 = boto3.resource(
+        's3',
+        aws_access_key_id=s3_conn["access_key"],
+        aws_secret_access_key=s3_conn["access_secret"],
+        endpoint_url=s3_conn["endpoint"],
+        config=Config(signature_version='s3v4')
+    )
+
+    s3.Bucket(dst_bucket).copy({'Bucket': src_bucket, 'Key': src_key}, dst_key)
+
+    if move:
+        s3.Object(src_bucket, src_key).delete()
