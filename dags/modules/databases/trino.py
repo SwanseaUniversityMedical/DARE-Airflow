@@ -83,5 +83,12 @@ def trino_execute_query(engine: sqlalchemy.engine.Engine, query: str) -> None:
     :param query: String for the SQL query that will be executed
     :param engine: SqlAlchemy engine object for communicating to a database
     """
-    engine.execute(query)
-    logger.info("Trino query successfully executed")
+    try:
+        logger.info("Trino query executing...")
+        logger.debug(f"query={query}")
+        engine.execute(query)
+        logger.info("Trino query success!")
+
+    except Exception as ex:
+        logger.exception("Trino query encountered an error!", exc_info=ex)
+        raise ex
