@@ -2,8 +2,7 @@ import os.path
 import logging
 import pendulum
 from airflow import DAG
-from airflow.decorators import task
-from airflow.operators.python import get_current_context
+from airflow.operators.python import get_current_context, task
 
 from modules.utils.sha1 import sha1
 from modules.databases.trino import (
