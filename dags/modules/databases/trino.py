@@ -129,7 +129,7 @@ def create_schema(trino: sqlalchemy.engine.Engine, schema: str, location: str):
     query = f"CREATE SCHEMA IF NOT EXISTS " \
             f"{validate_identifier(schema)} " \
             f"WITH (" \
-            f"location='s3a://{validate_s3_key(location)}'" \
+            f"location='s3a://{validate_s3_key(location)}/'" \
             f")"
     trino.execute(query)
 
@@ -157,7 +157,7 @@ def iceberg_create_table_from_hive(trino: sqlalchemy.engine.Engine, table: str, 
     query = f"CREATE TABLE " \
             f"{validate_identifier(table)} " \
             f"WITH (" \
-            f"location='s3a://{validate_s3_key(location)}', " \
+            f"location='s3a://{validate_s3_key(location)}/', " \
             f"format='PARQUET'" \
             f") " \
             f"AS SELECT {schema} FROM {validate_identifier(hive_table)}"
