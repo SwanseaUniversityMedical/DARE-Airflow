@@ -13,8 +13,8 @@ from modules.databases.trino import (
     drop_table,
     get_trino_conn_details,
     get_trino_engine,
-    hive_create_table_from_csv,
-    hive_create_table_from_parquet, iceberg_create_table_from_hive,
+    hive_create_table_from_parquet,
+    iceberg_create_table_from_hive,
     validate_identifier,
     validate_s3_key
 )
