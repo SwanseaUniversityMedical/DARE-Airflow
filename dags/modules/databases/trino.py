@@ -102,6 +102,7 @@ def escape_dataset(dataset):
     # TODO make this more sensible
     return escape_column(dataset)
 
+
 def validate_identifier(identifier):
     # Validate the identifier is strictly one or more dot separated identifiers
     assert re.match(

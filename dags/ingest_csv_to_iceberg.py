@@ -1,7 +1,5 @@
 import os.path
 import logging
-import time
-
 import pendulum
 from airflow import DAG
 from airflow.operators.python import get_current_context, task
@@ -100,7 +98,7 @@ with DAG(
         logging.debug(f"ingest={ingest}")
         ti.xcom_push("ingest", ingest)
 
-        hive_schema = f"minio.csv"
+        hive_schema = "minio.csv"
         hive_table = validate_identifier(f"{hive_schema}.{dataset}_{dag_id}")
         hive_bucket = "loading"
         hive_dir = validate_s3_key(f"ingest/{dataset}/{dag_id}")
@@ -117,7 +115,7 @@ with DAG(
         logging.debug(f"hive={hive}")
         ti.xcom_push("hive", hive)
 
-        iceberg_schema = f"iceberg.ingest"
+        iceberg_schema = "iceberg.ingest"
         iceberg_table = validate_identifier(f"{iceberg_schema}.{dataset}_{dag_id}")
         iceberg_bucket = "working"
         iceberg_dir = validate_s3_key(f"ingest/{dataset}/{dag_id}")
@@ -193,6 +191,5 @@ with DAG(
             drop_table(trino, table=hive_table)
 
         ########################################################################
-
 
     ingest_csv_to_iceberg()
