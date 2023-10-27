@@ -89,6 +89,10 @@ with DAG(
         ingest_file = os.path.basename(ingest_key)
         ingest_bucket = "ingest"
 
+        ingest_delete = conf.get("ingest_delete", False)
+        logging.debug(f"ingest_delete={ingest_delete}")
+        assert isinstance(ingest_delete, bool)
+
         # Base name of the dataset to provision, defaults to an escaped version of the path
         dataset = escape_dataset(conf.get("dataset", ingest_path))
 
@@ -98,6 +102,7 @@ with DAG(
             "path": ingest_path,
             "file": ingest_file,
             "dataset": dataset,
+            "delete": ingest_delete,
         }
         logging.debug(f"ingest={ingest}")
         ti.xcom_push("ingest", ingest)
@@ -142,7 +147,7 @@ with DAG(
             src_key=ingest_key,
             dst_bucket=hive_bucket,
             dst_key=hive_key,
-            move=(not debug)
+            move=ingest_delete
         )
 
         ########################################################################
