@@ -1,5 +1,7 @@
 import os.path
 import logging
+import time
+
 import pendulum
 from airflow import DAG
 from airflow.operators.python import get_current_context, task
@@ -173,6 +175,8 @@ with DAG(
                 location=hive_path
             )
 
+            time.sleep(5)
+
             logging.info("Create table in Iceberg connector...")
             iceberg_create_table_from_hive(
                 trino,
@@ -184,7 +188,8 @@ with DAG(
 
         finally:
             logging.info("Cleanup table in Hive connector...")
-            drop_table(trino, table=hive_table)
+            # TODO plumb this to debug input
+            # drop_table(trino, table=hive_table)
 
         ########################################################################
 
