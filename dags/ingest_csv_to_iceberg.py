@@ -14,7 +14,7 @@ from modules.databases.trino import (
     get_trino_engine,
     hive_create_table_from_csv,
     iceberg_create_table_from_hive,
-    s3_copy, s3_get_csv_columns,
+    s3_copy, s3_delete, s3_get_csv_columns,
     validate_identifier,
     validate_s3_key
 )
@@ -189,6 +189,14 @@ with DAG(
             logging.info("Cleanup table in Hive connector...")
             # TODO plumb this to debug input
             drop_table(trino, table=hive_table)
+
+            logging.info("Cleanup data from Hive connector in s3...")
+            # External location data is not cascade deleted on drop table
+            s3_delete(
+                conn_id="s3_conn",
+                bucket=hive_bucket,
+                key=hive_key
+            )
 
         ########################################################################
 
