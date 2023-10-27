@@ -30,7 +30,6 @@ with DAG(
     concurrency=1,
     tags=["ingest", "csv", "iceberg", "s3"],
 ) as dag:
-    # Test
 
     # Makes this logging namespace appear immediately in airflow
     logging.info("DAG parsing...")
@@ -201,4 +200,4 @@ with DAG(
         ########################################################################
 
 
-    ingest_csv_to_iceberg
+    ingest_csv_to_iceberg()
