@@ -228,6 +228,7 @@ def s3_delete(conn_id: str, bucket, key):
 
     s3.Object(bucket, key).delete()
 
+
 def s3_infer_csv_schema_pyarrow(conn_id: str, path: str):
 
     s3_conn = json.loads(BaseHook.get_connection(conn_id).get_extra())
