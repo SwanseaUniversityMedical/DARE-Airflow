@@ -110,6 +110,16 @@ def hive_create_table_from_csv(trino: sqlalchemy.engine.Engine, table: str, colu
     trino.execute(query)
 
 
+def hive_create_table_from_parquet(trino: sqlalchemy.engine.Engine, table: str, location: str):
+    query = f"CREATE TABLE " \
+            f"{validate_identifier(table)} " \
+            f"WITH (" \
+            f"external_location='s3a://{validate_s3_key(location)}', " \
+            f"format='PARQUET'" \
+            f")"
+    trino.execute(query)
+
+
 def iceberg_create_table_from_hive(trino: sqlalchemy.engine.Engine, table: str, hive_table: str, columns: list, dtypes: dict, location: str):
     assert all(map(validate_column, columns))
 

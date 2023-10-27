@@ -4,9 +4,9 @@ import pendulum
 from airflow import DAG
 from airflow.operators.python import get_current_context, task
 
-from modules.utils.csv import csv_get_columns_from_s3, csv_infer_schema_from_s3_pyarrow
-from modules.utils.s3 import s3_copy, s3_delete
-from modules.utils.sql import escape_column, escape_dataset
+from modules.databases.duckdb import s3_csv_to_parquet
+from modules.utils.s3 import s3_delete
+from modules.utils.sql import escape_dataset
 from modules.utils.sha1 import sha1
 from modules.databases.trino import (
     create_schema,
@@ -14,7 +14,7 @@ from modules.databases.trino import (
     get_trino_conn_details,
     get_trino_engine,
     hive_create_table_from_csv,
-    iceberg_create_table_from_hive,
+    hive_create_table_from_parquet, iceberg_create_table_from_hive,
     validate_identifier,
     validate_s3_key
 )
@@ -69,15 +69,6 @@ with DAG(
         logging.debug(f"debug={debug}")
         assert isinstance(debug, bool)
 
-        # Determine if a schema was passed to the dag
-        schema = conf.get("schema", None)
-        logging.debug(f"schema={schema}")
-
-        # Schema must be a dict or the word infer
-        assert (schema is None) or \
-               (isinstance(schema, dict)) or \
-               (isinstance(schema, str) and schema.lower() in ["infer", "pyarrow", "varchar"])
-
         # Path to the data file within the ingest bucket excluding the bucket name
         ingest_key = conf.get("ingest_key", None)
         logging.debug(f"ingest_key={ingest_key}")
@@ -111,13 +102,15 @@ with DAG(
         hive_table = validate_identifier(f"{hive_schema}.{dataset}_{dag_id}")
         hive_bucket = "loading"
         hive_dir = validate_s3_key(f"ingest/{dataset}/{dag_id}")
-        hive_key = f"{hive_dir}/{ingest_file}"
+        hive_file, _ = os.path.splitext(ingest_file)
+        hive_key = f"{hive_dir}/{hive_file}.parquet"
         hive_path = validate_s3_key(f"{hive_bucket}/{hive_dir}")
         hive = {
             "schema": hive_schema,
             "table": hive_table,
             "bucket": hive_bucket,
             "dir": hive_dir,
+            "file": hive_file,
             "key": hive_key,
             "path": hive_path,
         }
@@ -140,37 +133,17 @@ with DAG(
         ti.xcom_push("iceberg", iceberg)
 
         ########################################################################
-        logging.info("Move the data from ingest to loading bucket...")
-        s3_copy(
+        logging.info("Convert from ingest bucket CSV to loading bucket Parquet using DuckDB...")
+        s3_csv_to_parquet(
             conn_id="s3_conn",
             src_bucket=ingest_bucket,
             src_key=ingest_key,
             dst_bucket=hive_bucket,
-            dst_key=hive_key,
-            move=ingest_delete
+            dst_key=hive_key
         )
 
-        ########################################################################
-        logging.info("Peek at CSV on s3 to get column names...")
-        columns = csv_get_columns_from_s3(
-            conn_id="s3_conn",
-            path=f"{hive_bucket}/{hive_key}"
-        )
-        logging.debug(f"columns={columns}")
-
-        logging.info("Escape column names...")
-        columns = list(map(escape_column, columns))
-        logging.debug(f"columns={columns}")
-
-        dtypes = dict()
-        if schema in ["infer", "pyarrow"]:
-
-            logging.info("Using s3fs+pyarrow to infer CSV schema...")
-            dtypes = csv_infer_schema_from_s3_pyarrow(
-                conn_id="s3_conn",
-                path=f"{hive_bucket}/{hive_key}"
-            )
-            logging.debug(f"dtypes={dtypes}")
+        if ingest_delete:
+            s3_delete(conn_id="s3_conn", bucket=ingest_bucket, key=ingest_key)
 
         ########################################################################
         logging.info("Mounting CSV on s3 into Hive connector and copy to Iceberg...")
@@ -187,10 +160,9 @@ with DAG(
 
         try:
             logging.info("Create table in Hive connector...")
-            hive_create_table_from_csv(
+            hive_create_table_from_parquet(
                 trino,
                 table=hive_table,
-                columns=columns,
                 location=hive_path
             )
 
@@ -199,8 +171,6 @@ with DAG(
                 trino,
                 table=iceberg_table,
                 hive_table=hive_table,
-                columns=columns,
-                dtypes=dtypes,
                 location=iceberg_path
             )
 
