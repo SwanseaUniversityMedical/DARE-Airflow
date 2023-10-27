@@ -95,10 +95,10 @@ with DAG(
         dataset = escape_dataset(conf.get("dataset", ingest_path))
         logging.debug(f"dataset={dataset}")
 
-        hive_schema = f"minio.loading_{dag_id}"
-        hive_table = validate_identifier(f"{hive_schema}.{dataset}")
+        hive_schema = f"minio.ingest"
+        hive_table = validate_identifier(f"{hive_schema}.{dataset}_{dag_id}")
         hive_bucket = "loading"
-        hive_dir = validate_s3_key(f"{dataset}/{dag_id}")
+        hive_dir = validate_s3_key(f"ingest/{dataset}/{dag_id}")
         hive_key = f"{hive_dir}/{ingest_file}"
         hive_path = validate_s3_key(f"{hive_bucket}/{hive_dir}")
         hive = {
@@ -112,10 +112,10 @@ with DAG(
         logging.debug(f"hive={hive}")
         ti.xcom_push("hive", hive)
 
-        iceberg_schema = f"iceberg.sail_{dag_id}"
-        iceberg_table = validate_identifier(f"{iceberg_schema}.{dataset}")
+        iceberg_schema = f"iceberg.ingest"
+        iceberg_table = validate_identifier(f"{iceberg_schema}.{dataset}_{dag_id}")
         iceberg_bucket = "working"
-        iceberg_dir = validate_s3_key(dataset)
+        iceberg_dir = validate_s3_key(f"ingest/{dataset}/{dag_id}")
         iceberg_path = validate_s3_key(f"{iceberg_bucket}/{iceberg_dir}")
         iceberg = {
             "schema": iceberg_schema,
@@ -161,6 +161,9 @@ with DAG(
         logging.info("Create schema in Hive connector...")
         create_schema(trino, schema=hive_schema, location=hive_bucket)
 
+        logging.info("Create schema in Iceberg connector...")
+        create_schema(trino, schema=iceberg_schema, location=iceberg_bucket)
+
         try:
             logging.info("Create table in Hive connector...")
             hive_create_table_from_csv(
@@ -171,31 +174,22 @@ with DAG(
             )
 
             try:
-                logging.info("Create schema in Iceberg connector...")
-                create_schema(trino, schema=iceberg_schema, location=iceberg_bucket)
+                logging.info("Create table in Iceberg connector...")
+                iceberg_create_table_from_hive(
+                    trino,
+                    table=iceberg_table,
+                    hive_table=hive_table,
+                    columns=columns,
+                    location=iceberg_path
+                )
 
-                try:
-                    logging.info("Create table in Iceberg connector...")
-                    iceberg_create_table_from_hive(
-                        trino,
-                        table=iceberg_table,
-                        hive_table=hive_table,
-                        columns=columns,
-                        location=iceberg_path
-                    )
-
-                except Exception as ex:
-                    logging.error("Cleanup schema in Iceberg connector...")
-                    drop_schema(trino, schema=iceberg_schema)
-                    raise ex
-
-            finally:
-                logging.info("Cleanup table in Hive connector...")
-                drop_table(trino, table=hive_table)
+            except Exception as ex:
+                logging.error("Cleanup schema in Iceberg connector...")
+                raise ex
 
         finally:
-            logging.info("Cleanup schema in Hive connector...")
-            drop_schema(trino, schema=hive_schema)
+            logging.info("Cleanup table in Hive connector...")
+            drop_table(trino, table=hive_table)
 
         ########################################################################
 
