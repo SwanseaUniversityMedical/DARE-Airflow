@@ -49,10 +49,10 @@ def get_trino_engine(trino_conn_details: dict) -> sqlalchemy.engine.Engine:
     port = trino_conn_details['port']
     database = trino_conn_details['database']
 
-    logger.debug(f"username={username}")
-    logger.debug(f"host={host}")
-    logger.debug(f"port={port}")
-    logger.debug(f"database={database}")
+    logger.info(f"username={username}")
+    logger.info(f"host={host}")
+    logger.info(f"port={port}")
+    logger.info(f"database={database}")
 
     engine = create_engine(
         f"trino://{username}@{host}:{port}/{database}",
@@ -74,7 +74,7 @@ def trino_execute_query(engine: sqlalchemy.engine.Engine, query: str, **kwargs) 
     """
     try:
         logger.info("Trino query executing...")
-        logger.debug(f"query={query}")
+        logger.info(f"query={query}")
         engine.execute(query, **kwargs)
         logger.info("Trino query success!")
 

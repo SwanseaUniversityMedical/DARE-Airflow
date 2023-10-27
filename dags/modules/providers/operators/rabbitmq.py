@@ -56,7 +56,7 @@ class RabbitMQPythonOperator(BaseOperator):
 
             if event["status"] == "success":
                 logger.info("Consumed message!")
-                logger.debug(f"message={event['message']}")
+                logger.info(f"message={event['message']}")
 
                 # Process the deferred message!
                 last_message_utc = timezone.utcnow()
@@ -76,7 +76,7 @@ class RabbitMQPythonOperator(BaseOperator):
             message = self.hook.pull(self.queue_name)
             if message is not None:
                 logger.info("Consumed message!")
-                logger.debug(f"message={message}")
+                logger.info(f"message={message}")
 
                 # Process the message!
                 last_message_utc = timezone.utcnow()

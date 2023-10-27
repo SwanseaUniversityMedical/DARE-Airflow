@@ -32,12 +32,12 @@ def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: s
             f"SET s3_use_ssl=False;" \
             f"SET s3_url_style='path';" \
             f"SET memory_limit='{memory}MB'"
-    logger.debug(f"query={query}")
+    logger.info(f"query={query}")
     con.execute(query)
 
     query = f"COPY (SELECT * FROM 's3://{src_bucket}/{src_key}')" \
             f"TO 's3://{dst_bucket}/{dst_key}'" \
             f"(FORMAT PARQUET, CODEC 'SNAPPY', ROW_GROUP_SIZE 100000);"
-    logger.debug(f"query={query}")
+    logger.info(f"query={query}")
     con.execute(query)
 

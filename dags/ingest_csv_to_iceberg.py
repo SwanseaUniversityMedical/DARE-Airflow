@@ -41,15 +41,15 @@ with DAG(
 
         # Extract the Airflow context object for this run of the DAG
         context = get_current_context()
-        logging.debug(f"context={context}")
+        logging.info(f"context={context}")
 
         # Extract the task instance object for handling XCOM variables
         ti = context['ti']
-        logging.debug(f"ti={ti}")
+        logging.info(f"ti={ti}")
 
         # Extract the JSON dict of params for this run of the DAG
         conf = context['dag_run'].conf
-        logging.debug(f"conf={conf}")
+        logging.info(f"conf={conf}")
 
         # Unique hashed name for this run of the DAG
         dag_hash = sha1(
@@ -57,21 +57,21 @@ with DAG(
             f"run_id={ti.run_id}/"
             f"task_id={ti.task_id}"
         )
-        logging.debug(f"dag_hash={dag_hash}")
+        logging.info(f"dag_hash={dag_hash}")
 
         dag_id = f"{dag_hash}_{ti.try_number}"
-        logging.debug(f"dag_id={dag_id}")
+        logging.info(f"dag_id={dag_id}")
 
         ########################################################################
         logging.info("Validate inputs...")
 
         debug = conf.get("debug", False)
-        logging.debug(f"debug={debug}")
+        logging.info(f"debug={debug}")
         assert isinstance(debug, bool)
 
         # Path to the data file within the ingest bucket excluding the bucket name
         ingest_key = conf.get("ingest_key", None)
-        logging.debug(f"ingest_key={ingest_key}")
+        logging.info(f"ingest_key={ingest_key}")
         assert (ingest_key is not None) and \
                isinstance(ingest_key, str) and \
                ingest_key.endswith(".csv")
@@ -81,7 +81,7 @@ with DAG(
         ingest_bucket = "ingest"
 
         ingest_delete = conf.get("ingest_delete", False)
-        logging.debug(f"ingest_delete={ingest_delete}")
+        logging.info(f"ingest_delete={ingest_delete}")
         assert isinstance(ingest_delete, bool)
 
         # Base name of the dataset to provision, defaults to an escaped version of the path
@@ -95,7 +95,7 @@ with DAG(
             "dataset": dataset,
             "delete": ingest_delete,
         }
-        logging.debug(f"ingest={ingest}")
+        logging.info(f"ingest={ingest}")
         ti.xcom_push("ingest", ingest)
 
         hive_schema = "minio.csv"
@@ -114,7 +114,7 @@ with DAG(
             "key": hive_key,
             "path": hive_path,
         }
-        logging.debug(f"hive={hive}")
+        logging.info(f"hive={hive}")
         ti.xcom_push("hive", hive)
 
         iceberg_schema = "iceberg.ingest"
@@ -129,7 +129,7 @@ with DAG(
             "dir": iceberg_dir,
             "path": iceberg_path,
         }
-        logging.debug(f"iceberg={iceberg}")
+        logging.info(f"iceberg={iceberg}")
         ti.xcom_push("iceberg", iceberg)
 
         ########################################################################
