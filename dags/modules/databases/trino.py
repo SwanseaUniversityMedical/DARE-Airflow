@@ -5,7 +5,9 @@ import logging
 
 import boto3
 import pandas as pd
+import pyarrow
 import s3fs
+import pyarrow.csv as pcsv
 import sqlalchemy.engine
 from airflow.hooks.base import BaseHook
 from botocore.config import Config
@@ -153,8 +155,17 @@ def hive_create_table_from_csv(trino: sqlalchemy.engine.Engine, table: str, colu
     trino.execute(query)
 
 
-def iceberg_create_table_from_hive(trino: sqlalchemy.engine.Engine, table: str, hive_table: str, columns: list, location: str):
-    schema = ", ".join(map(lambda col: f"{validate_column(col)}", columns))
+def iceberg_create_table_from_hive(trino: sqlalchemy.engine.Engine, table: str, hive_table: str, columns: list, dtypes: dict, location: str):
+    assert all(map(validate_column, columns))
+    assert all(lambda col: col in dtypes, columns)
+
+    def cast_if_needed(col):
+        if col in dtypes:
+            return f"CAST({col} AS {dtypes[col]}) AS {col}"
+        return col
+
+    schema = ", ".join(map(cast_if_needed, columns))
+
     query = f"CREATE TABLE " \
             f"{validate_identifier(table)} " \
             f"WITH (" \
@@ -217,3 +228,40 @@ def s3_delete(conn_id: str, bucket, key):
     )
 
     s3.Object(bucket, key).delete()
+
+def s3_infer_csv_schema_pyarrow(conn_id: str, path: str):
+
+    s3_conn = json.loads(BaseHook.get_connection(conn_id).get_extra())
+
+    fs = s3fs.S3FileSystem(
+        endpoint_url=s3_conn["endpoint_url"],
+        key=s3_conn["aws_access_key_id"],
+        secret=s3_conn["aws_secret_access_key"],
+        use_ssl=False
+    )
+
+    # "lazily" compute csv schema directly from s3
+    # TODO it actually seems to be loading the whole file into ram... womp womp
+    with fs.open(path, "rb") as fp:
+        schema: pyarrow.lib.Schema = pcsv.open_csv(fp).schema
+
+    logger.info(f"schema={schema}")
+
+    # convert the pyarrow schema to a iceberg sql schema
+    # TODO add other iceberg datatypes
+    dtype_map = {
+        "STRING": "VARCHAR"
+    }
+
+    # create a list of tuples of (name, dtype)
+    # dtype is remapped if it is in the dtype_map
+    columns = dict()
+    for field in schema:
+        column = escape_column(field.name)
+        dtype = str(field.type).upper()
+        dtype = dtype_map.get(dtype, dtype)
+        columns[column] = dtype
+
+    logger.info(f"columns={columns}")
+
+    return columns

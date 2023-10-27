@@ -15,7 +15,7 @@ from modules.databases.trino import (
     hive_create_table_from_csv,
     iceberg_create_table_from_hive,
     s3_copy, s3_delete, s3_get_csv_columns,
-    validate_identifier,
+    s3_infer_csv_schema_pyarrow, validate_identifier,
     validate_s3_key
 )
 
@@ -162,6 +162,16 @@ with DAG(
         columns = list(map(escape_column, columns))
         logging.debug(f"columns={columns}")
 
+        dtypes = dict()
+        if schema in ["infer", "pyarrow"]:
+
+            logging.info("Using s3fs+pyarrow to infer CSV schema...")
+            dtypes = s3_infer_csv_schema_pyarrow(
+                conn_id="s3_conn",
+                path=f"{hive_bucket}/{hive_key}"
+            )
+            logging.debug(f"dtypes={dtypes}")
+
         ########################################################################
         logging.info("Mounting CSV on s3 into Hive connector and copy to Iceberg...")
 
@@ -190,11 +200,14 @@ with DAG(
                 table=iceberg_table,
                 hive_table=hive_table,
                 columns=columns,
+                dtypes=dtypes,
                 location=iceberg_path
             )
 
         finally:
-            if not debug:
+            if debug:
+                logging.info("Debug mode, not cleaning up table in Hive connector...")
+            else:
                 logging.info("Cleanup table in Hive connector...")
                 drop_table(trino, table=hive_table)
 
