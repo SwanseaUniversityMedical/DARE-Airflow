@@ -7,6 +7,7 @@ import pyarrow.csv as pcsv
 from airflow.hooks.base import BaseHook
 
 from .s3 import s3_get_fs
+from .sql import escape_column
 
 logger = logging.getLogger(__name__)
 
