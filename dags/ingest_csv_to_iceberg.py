@@ -173,19 +173,14 @@ with DAG(
                 location=hive_path
             )
 
-            try:
-                logging.info("Create table in Iceberg connector...")
-                iceberg_create_table_from_hive(
-                    trino,
-                    table=iceberg_table,
-                    hive_table=hive_table,
-                    columns=columns,
-                    location=iceberg_path
-                )
-
-            except Exception as ex:
-                logging.error("Cleanup schema in Iceberg connector...")
-                raise ex
+            logging.info("Create table in Iceberg connector...")
+            iceberg_create_table_from_hive(
+                trino,
+                table=iceberg_table,
+                hive_table=hive_table,
+                columns=columns,
+                location=iceberg_path
+            )
 
         finally:
             logging.info("Cleanup table in Hive connector...")
