@@ -157,7 +157,6 @@ def hive_create_table_from_csv(trino: sqlalchemy.engine.Engine, table: str, colu
 
 def iceberg_create_table_from_hive(trino: sqlalchemy.engine.Engine, table: str, hive_table: str, columns: list, dtypes: dict, location: str):
     assert all(map(validate_column, columns))
-    assert all(lambda col: col in dtypes, columns)
 
     def cast_if_needed(col):
         if col in dtypes:

@@ -76,7 +76,7 @@ with DAG(
         # Schema must be a dict or the word infer
         assert (schema is None) or \
                (isinstance(schema, dict)) or \
-               (isinstance(schema, str) and schema.lower() in ["infer", "varchar"])
+               (isinstance(schema, str) and schema.lower() in ["infer", "pyarrow", "varchar"])
 
         # Path to the data file within the ingest bucket excluding the bucket name
         ingest_key = conf.get("ingest_key", None)
