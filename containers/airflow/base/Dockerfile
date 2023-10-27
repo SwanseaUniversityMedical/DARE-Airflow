@@ -21,8 +21,8 @@ RUN pip install --no-cache-dir pyclean && \
 
 # Use ADD to extract the GZip
 ADD containers/airflow/base/httpfs.duckdb_extension.gz /opt/duckdb/
-RUN duckcli -D ":memory:" -e "INSTALL /opt/duckdb/httpfs.duckdb_extension; LOAD /opt/duckdb/httpfs.duckdb_extension"
-RUN duckcli -D ":memory:" -e "LOAD /opt/duckdb/httpfs.duckdb_extension"
+RUN duckcli -D ":memory:" -e "INSTALL '/opt/duckdb/httpfs.duckdb_extension'; LOAD httpfs"
+RUN duckcli -D ":memory:" -e "LOAD httpfs"
 
 # Flatten the image
 #FROM scratch
