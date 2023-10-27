@@ -191,9 +191,9 @@ def s3_copy(conn_id: str, src_bucket, dst_bucket, src_key, dst_key, move=False):
 
     s3 = boto3.resource(
         's3',
-        aws_access_key_id=s3_conn["access_key"],
-        aws_secret_access_key=s3_conn["access_secret"],
-        endpoint_url=s3_conn["endpoint"],
+        aws_access_key_id=s3_conn["aws_access_key_id"],
+        aws_secret_access_key=s3_conn["aws_secret_access_key"],
+        endpoint_url=s3_conn["endpoint_url"],
         config=Config(signature_version='s3v4')
     )
 
