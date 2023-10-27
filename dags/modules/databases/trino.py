@@ -120,15 +120,7 @@ def hive_create_table_from_parquet(trino: sqlalchemy.engine.Engine, table: str, 
     trino.execute(query)
 
 
-def iceberg_create_table_from_hive(trino: sqlalchemy.engine.Engine, table: str, hive_table: str, columns: list, dtypes: dict, location: str):
-    assert all(map(validate_column, columns))
-
-    def cast_if_needed(col):
-        if col in dtypes:
-            return f"CAST({col} AS {dtypes[col]}) AS {col}"
-        return col
-
-    schema = ", ".join(map(cast_if_needed, columns))
+def iceberg_create_table_from_hive(trino: sqlalchemy.engine.Engine, table: str, hive_table: str, location: str):
 
     query = f"CREATE TABLE " \
             f"{validate_identifier(table)} " \
@@ -136,7 +128,7 @@ def iceberg_create_table_from_hive(trino: sqlalchemy.engine.Engine, table: str, 
             f"location='s3a://{validate_s3_key(location)}/', " \
             f"format='PARQUET'" \
             f") " \
-            f"AS SELECT {schema} FROM {validate_identifier(hive_table)}"
+            f"AS SELECT * FROM {validate_identifier(hive_table)}"
     trino.execute(query)
 
 
