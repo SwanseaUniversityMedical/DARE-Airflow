@@ -22,7 +22,8 @@ RUN pip install --no-cache-dir pyclean && \
 COPY containers/airflow/base/httpfs.duckdb_extension.gz /opt/duckdb/
 USER root
 RUN gzip -d /opt/duckdb/httpfs.duckdb_extension.gz && \
-    chown airflow:root /opt/duckdb/httpfs.duckdb_extension
+    chown airflow:root /opt/duckdb/httpfs.duckdb_extension && \
+    chmod 0777 /opt/duckdb/httpfs.duckdb_extension
 USER airflow
 
 RUN duckcli -D ":memory:" -e "INSTALL '/opt/duckdb/httpfs.duckdb_extension'; LOAD httpfs" && \
