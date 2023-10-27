@@ -65,6 +65,10 @@ with DAG(
         ########################################################################
         logging.info("Validate inputs...")
 
+        debug = conf.get("debug", False)
+        logging.debug(f"debug={debug}")
+        assert isinstance(debug, bool)
+
         # Determine if a schema was passed to the dag
         schema = conf.get("schema", None)
         logging.debug(f"schema={schema}")
@@ -132,14 +136,13 @@ with DAG(
 
         ########################################################################
         logging.info("Move the data from ingest to loading bucket...")
-        # TODO plumb move up to an dag_run.conf input
         s3_copy(
             conn_id="s3_conn",
             src_bucket=ingest_bucket,
             src_key=ingest_key,
             dst_bucket=hive_bucket,
             dst_key=hive_key,
-            move=False
+            move=(not debug)
         )
 
         ########################################################################
@@ -155,7 +158,7 @@ with DAG(
         logging.debug(f"columns={columns}")
 
         ########################################################################
-        logging.info("Mounting CSV on s3 into Iceberg via Hive connector...")
+        logging.info("Mounting CSV on s3 into Hive connector and copy to Iceberg...")
 
         # Create a connection to Trino
         trino_conn = get_trino_conn_details()
@@ -186,17 +189,17 @@ with DAG(
             )
 
         finally:
-            logging.info("Cleanup table in Hive connector...")
-            # TODO plumb this to debug input
-            drop_table(trino, table=hive_table)
+            if not debug:
+                logging.info("Cleanup table in Hive connector...")
+                drop_table(trino, table=hive_table)
 
-            logging.info("Cleanup data from Hive connector in s3...")
-            # External location data is not cascade deleted on drop table
-            s3_delete(
-                conn_id="s3_conn",
-                bucket=hive_bucket,
-                key=hive_key
-            )
+                logging.info("Cleanup data from Hive connector in s3...")
+                # External location data is not cascade deleted on drop table
+                s3_delete(
+                    conn_id="s3_conn",
+                    bucket=hive_bucket,
+                    key=hive_key
+                )
 
         ########################################################################
 
