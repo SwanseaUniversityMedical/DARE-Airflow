@@ -19,10 +19,13 @@ RUN pip install --no-cache-dir pyclean && \
     pyclean -v /home/airflow/.local && \
     pip uninstall -y pyclean
 
-# Use ADD to extract the GZip
-COPY --chown airflow:airflow containers/airflow/base/httpfs.duckdb_extension.gz /opt/duckdb/
+COPY containers/airflow/base/httpfs.duckdb_extension.gz /opt/duckdb/
+USER root
 RUN gzip -d /opt/duckdb/httpfs.duckdb_extension.gz && \
-    duckcli -D ":memory:" -e "INSTALL '/opt/duckdb/httpfs.duckdb_extension'; LOAD httpfs"
+    chown airflow:airflow /opt/duckdb/httpfs.duckdb_extension
+USER airflow
+
+RUN duckcli -D ":memory:" -e "INSTALL '/opt/duckdb/httpfs.duckdb_extension'; LOAD httpfs"
 RUN duckcli -D ":memory:" -e "LOAD httpfs"
 
 # Flatten the image
