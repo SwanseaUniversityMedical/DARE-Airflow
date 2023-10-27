@@ -4,18 +4,18 @@ import pendulum
 from airflow import DAG
 from airflow.operators.python import get_current_context, task
 
+from modules.utils.csv import csv_get_columns_from_s3, csv_infer_schema_from_s3_pyarrow
+from modules.utils.s3 import s3_copy, s3_delete
+from modules.utils.sql import escape_column, escape_dataset
 from modules.utils.sha1 import sha1
 from modules.databases.trino import (
     create_schema,
     drop_table,
-    escape_column,
-    escape_dataset,
     get_trino_conn_details,
     get_trino_engine,
     hive_create_table_from_csv,
     iceberg_create_table_from_hive,
-    s3_copy, s3_delete, s3_get_csv_columns,
-    s3_infer_csv_schema_pyarrow, validate_identifier,
+    validate_identifier,
     validate_s3_key
 )
 
@@ -152,7 +152,7 @@ with DAG(
 
         ########################################################################
         logging.info("Peek at CSV on s3 to get column names...")
-        columns = s3_get_csv_columns(
+        columns = csv_get_columns_from_s3(
             conn_id="s3_conn",
             path=f"{hive_bucket}/{hive_key}"
         )
@@ -166,7 +166,7 @@ with DAG(
         if schema in ["infer", "pyarrow"]:
 
             logging.info("Using s3fs+pyarrow to infer CSV schema...")
-            dtypes = s3_infer_csv_schema_pyarrow(
+            dtypes = csv_infer_schema_from_s3_pyarrow(
                 conn_id="s3_conn",
                 path=f"{hive_bucket}/{hive_key}"
             )
