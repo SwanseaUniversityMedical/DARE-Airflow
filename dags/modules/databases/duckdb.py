@@ -24,7 +24,8 @@ def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: s
 
     con = duckdb.connect(database=':memory:')
 
-    query = f"LOAD httpfs;" \
+    query = f"INSTALL '/opt/duckdb/httpfs.duckdb_extension';" \
+            f"LOAD httpfs;" \
             f"SET s3_endpoint='{endpoint}';" \
             f"SET s3_access_key_id='{access_key_id}';" \
             f"SET s3_secret_access_key='{secret_access_key}';" \
