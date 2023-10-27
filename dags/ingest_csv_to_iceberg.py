@@ -9,7 +9,6 @@ from airflow.operators.python import get_current_context, task
 from modules.utils.sha1 import sha1
 from modules.databases.trino import (
     create_schema,
-    drop_schema,
     drop_table,
     escape_column,
     escape_dataset,
@@ -85,19 +84,23 @@ with DAG(
                ingest_key.endswith(".csv")
 
         ingest_path = os.path.dirname(ingest_key)
-        logging.debug(f"ingest_path={ingest_path}")
-
         ingest_file = os.path.basename(ingest_key)
-        logging.debug(f"ingest_file={ingest_file}")
-
         ingest_bucket = "ingest"
-        logging.debug(f"ingest_bucket={ingest_bucket}")
 
         # Base name of the dataset to provision, defaults to an escaped version of the path
         dataset = escape_dataset(conf.get("dataset", ingest_path))
-        logging.debug(f"dataset={dataset}")
 
-        hive_schema = f"minio.ingest"
+        ingest = {
+            "bucket": ingest_bucket,
+            "key": ingest_key,
+            "path": ingest_path,
+            "file": ingest_file,
+            "dataset": dataset,
+        }
+        logging.debug(f"ingest={ingest}")
+        ti.xcom_push("ingest", ingest)
+
+        hive_schema = f"minio.csv"
         hive_table = validate_identifier(f"{hive_schema}.{dataset}_{dag_id}")
         hive_bucket = "loading"
         hive_dir = validate_s3_key(f"ingest/{dataset}/{dag_id}")
@@ -175,8 +178,6 @@ with DAG(
                 location=hive_path
             )
 
-            time.sleep(5)
-
             logging.info("Create table in Iceberg connector...")
             iceberg_create_table_from_hive(
                 trino,
@@ -189,7 +190,7 @@ with DAG(
         finally:
             logging.info("Cleanup table in Hive connector...")
             # TODO plumb this to debug input
-            # drop_table(trino, table=hive_table)
+            drop_table(trino, table=hive_table)
 
         ########################################################################
 
