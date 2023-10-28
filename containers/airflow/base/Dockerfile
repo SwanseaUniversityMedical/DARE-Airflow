@@ -29,5 +29,5 @@ RUN duckcli -D ":memory:" -e "INSTALL '/opt/duckdb/httpfs.duckdb_extension'; LOA
     python3 -c "import duckdb; duckdb.connect(':memory:').sql('LOAD httpfs')"
 
 # Flatten the image
-FROM scratch
-COPY --from=build / /
+#FROM scratch
+#COPY --from=build / /
