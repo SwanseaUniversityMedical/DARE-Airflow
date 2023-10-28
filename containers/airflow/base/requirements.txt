@@ -4,7 +4,7 @@ duckdb==0.9.1
 duckcli==0.2.1
 apache-airflow-providers-amazon==8.3.1
 airflow-provider-rabbitmq==0.6.1
-ydata-profiling==4.4.0
+ydata-profiling==4.6.1
 pyarrow==12.0.1
 s3fs==2023.6.0
 pandas==2.0.3
