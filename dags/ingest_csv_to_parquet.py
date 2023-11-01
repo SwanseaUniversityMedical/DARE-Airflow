@@ -38,10 +38,11 @@ def unpack_minio_event(message):
     bucket = records["s3"]["bucket"]["name"]
     etag = s3_object["eTag"]
 
-    src_file_path: str = s3_object["key"]
+    src_file_path: str = s3_object["key"].replace('%2F', '/')
     assert src_file_path.endswith(".csv")
 
-    file_name = src_file_path.replace(".csv", "").replace('%2F', '_')
+    file_name = src_file_path.replace(".csv", "")
+    dir_name = src_file_path.split("/")[0]
 
     full_file_path = message_json['Key']
     head_path = '/'.join(full_file_path.split('/')[:-1])
@@ -52,6 +53,7 @@ def unpack_minio_event(message):
         src_file_path=src_file_path,
         etag=etag,
         file_name=file_name,
+        dir_name=dir_name,
         full_file_path=full_file_path,
         head_path=head_path
     )
@@ -72,6 +74,9 @@ with DAG(
     concurrency=1,
     tags=["ingest", "csv", "parquet", "s3"],
 ) as dag:
+
+    # Makes this logging namespace appear immediately in airflow
+    logger.info("DAG parsing...")
 
     def process_event(message):
         logger.info("Processing message!")
@@ -125,7 +130,7 @@ with DAG(
         )
         logger.info(f"hive table schema={hive_schema_str}")
 
-        table_name = re.sub(r"[^a-zA-Z0-9]", '_', event['file_name']).strip().strip('_').strip()
+        table_name = re.sub(r"[^a-zA-Z0-9]", '_', event['dir_name']).strip().strip('_').strip()
         logger.info(f"table name={table_name}")
 
         hive_table_name = f"{table_name}_{dag_hash}_{ti.try_number}"
