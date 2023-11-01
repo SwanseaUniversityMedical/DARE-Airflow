@@ -1,4 +1,4 @@
-FROM apache/airflow:2.6.3-python3.10 as build
+FROM apache/airflow:2.7.2-python3.10 as build
 
 # Ensure that release notes get picked up from our repo and not from the apache airflow base repo
 # If the apache airflow notes are used we will incorrectly pickup the release notes from our version
@@ -29,5 +29,5 @@ RUN duckcli -D ":memory:" -e "INSTALL '/opt/duckdb/httpfs.duckdb_extension'; LOA
     python3 -c "import duckdb; duckdb.connect(':memory:').sql('LOAD httpfs')"
 
 # Flatten the image
-FROM scratch
-COPY --from=build / /
+#FROM scratch
+#COPY --from=build / /
