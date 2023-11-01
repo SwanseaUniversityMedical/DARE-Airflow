@@ -8,5 +8,5 @@ ydata-profiling==4.6.1
 pyarrow==13.0.0
 s3fs==2023.10.0
 pandas==2.0.3
-polars==0.18.13
+polars==0.19.12
 apache-airflow-providers-trino==5.4.0
