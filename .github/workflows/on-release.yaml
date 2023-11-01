@@ -44,10 +44,13 @@ jobs:
       container-registry-project: ${{ vars.HARBOR_PROJECT }}
       container-registry-repo: airflow/base
       release-tag-format: 'base-${version}'
+      cosign-public-key: ${{ vars.COSIGN_PUBLIC_KEY }}
       slack-channel: ${{ vars.SLACK_CHANNEL }}
       build-command: |
         docker build -t $IMAGE -f containers/airflow/base/Dockerfile .
     secrets:
+      cosign-private-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+      cosign-password: ${{ secrets.COSIGN_PASSWORD }}
       container-registry-token: ${{ secrets.HARBOR_TOKEN }}
       slack-token: ${{ secrets.SLACK_TOKEN }}
 
@@ -63,9 +66,12 @@ jobs:
       container-registry-project: ${{ vars.HARBOR_PROJECT }}
       container-registry-repo: airflow/dags
       release-tag-format: 'dags-${version}'
+      cosign-public-key: ${{ vars.COSIGN_PUBLIC_KEY }}
       slack-channel: ${{ vars.SLACK_CHANNEL }}
       build-command: |
         docker build -t $IMAGE -f containers/airflow/dags/Dockerfile .
     secrets:
+      cosign-private-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+      cosign-password: ${{ secrets.COSIGN_PASSWORD }}
       container-registry-token: ${{ secrets.HARBOR_TOKEN }}
       slack-token: ${{ secrets.SLACK_TOKEN }}
