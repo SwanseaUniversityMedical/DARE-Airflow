@@ -17,7 +17,7 @@ concurrency:
 jobs:
   changes:
     # Detect which files have been changed on this PR's full history
-    uses: SwanseaUniversityMedical/workflows/.github/workflows/changes-release.yaml@v4.3.0
+    uses: SwanseaUniversityMedical/workflows/.github/workflows/changes-release.yaml@v5.0.1
     with:
       slack-channel: ${{ vars.SLACK_CHANNEL }}
       filters: |
@@ -36,7 +36,7 @@ jobs:
     # Build the Airflow container with dags inside and push it as :rc-1.0.0
     needs: changes
     if: fromJSON(needs.changes.outputs.changes).base-container == 'true'
-    uses: SwanseaUniversityMedical/workflows/.github/workflows/on-release-container.yaml@v4.3.0
+    uses: SwanseaUniversityMedical/workflows/.github/workflows/on-release-container.yaml@v5.0.1
     with:
       job-name: base-container
       container-registry: ${{ vars.HARBOR_REGISTRY }}
@@ -58,7 +58,7 @@ jobs:
     # Build the Airflow container with dags inside and push it as :rc-1.0.0
     needs: changes
     if: fromJSON(needs.changes.outputs.changes).dags-container == 'true'
-    uses: SwanseaUniversityMedical/workflows/.github/workflows/on-release-container.yaml@v4.3.0
+    uses: SwanseaUniversityMedical/workflows/.github/workflows/on-release-container.yaml@v5.0.1
     with:
       job-name: dags-container
       container-registry: ${{ vars.HARBOR_REGISTRY }}
