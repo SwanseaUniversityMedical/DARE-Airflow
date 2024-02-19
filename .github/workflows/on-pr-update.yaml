@@ -18,7 +18,7 @@ concurrency:
 jobs:
   changes:
     # Detect which files have been changed on this PR's full history
-    uses: SwanseaUniversityMedical/workflows/.github/workflows/changes-pr.yaml@v4.3.0
+    uses: SwanseaUniversityMedical/workflows/.github/workflows/changes-pr.yaml@v5.0.1
     with:
       slack-channel: ${{ vars.SLACK_CHANNEL }}
       filters: |
@@ -37,40 +37,38 @@ jobs:
     # Build the container and push it as :pr-42 and :pr-42-fe45b3h
     needs: changes
     if: fromJSON(needs.changes.outputs.changes).base-container == 'true'
-    uses: SwanseaUniversityMedical/workflows/.github/workflows/on-pr-update-container.yaml@v4.3.0
+    uses: SwanseaUniversityMedical/workflows/.github/workflows/build-pr-container.yaml@v5.0.1
     with:
       job-name: base-container
-      container-registry: ${{ vars.HARBOR_REGISTRY }}
-      container-registry-user: ${{ vars.HARBOR_USER }}
-      container-registry-project: ${{ vars.HARBOR_PROJECT }}
-      container-registry-repo: airflow/base
+      registry: ${{ vars.HARBOR_REGISTRY }}
+      registry-user: ${{ vars.HARBOR_USER }}
+      registry-repo: dare/airflow/base
       cosign-public-key: ${{ vars.COSIGN_PUBLIC_KEY }}
       slack-channel: ${{ vars.SLACK_CHANNEL }}
-      build-command: |
-        docker build -t $IMAGE -f containers/airflow/base/Dockerfile .
+      build-file: containers/airflow/base/Dockerfile
+      build-context: .
     secrets:
       cosign-private-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
       cosign-password: ${{ secrets.COSIGN_PASSWORD }}
-      container-registry-token: ${{ secrets.HARBOR_TOKEN }}
+      registry-token: ${{ secrets.HARBOR_TOKEN }}
       slack-token: ${{ secrets.SLACK_TOKEN }}
 
   dags-container:
     # Build the container and push it as :pr-42 and :pr-42-fe45b3h
     needs: changes
     if: fromJSON(needs.changes.outputs.changes).dags-container == 'true'
-    uses: SwanseaUniversityMedical/workflows/.github/workflows/on-pr-update-container.yaml@v4.3.0
+    uses: SwanseaUniversityMedical/workflows/.github/workflows/build-pr-container.yaml@v5.0.1
     with:
       job-name: dags-container
-      container-registry: ${{ vars.HARBOR_REGISTRY }}
-      container-registry-user: ${{ vars.HARBOR_USER }}
-      container-registry-project: ${{ vars.HARBOR_PROJECT }}
-      container-registry-repo: airflow/dags
+      registry: ${{ vars.HARBOR_REGISTRY }}
+      registry-user: ${{ vars.HARBOR_USER }}
+      registry-repo: dare/airflow/dags
       cosign-public-key: ${{ vars.COSIGN_PUBLIC_KEY }}
       slack-channel: ${{ vars.SLACK_CHANNEL }}
-      build-command: |
-        docker build -t $IMAGE -f containers/airflow/dags/Dockerfile .
+      build-file: containers/airflow/dags/Dockerfile
+      build-context: .
     secrets:
       cosign-private-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
       cosign-password: ${{ secrets.COSIGN_PASSWORD }}
-      container-registry-token: ${{ secrets.HARBOR_TOKEN }}
+      registry-token: ${{ secrets.HARBOR_TOKEN }}
       slack-token: ${{ secrets.SLACK_TOKEN }}
