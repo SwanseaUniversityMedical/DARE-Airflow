@@ -50,9 +50,14 @@ services:
     ports:
         - 5672:5672
         - 15672:15672
+    environment:
+        RABBITMQ_DEFAULT_USER: guest
+        RABBITMQ_DEFAULT_PASS: guest
     volumes:
         - rabbitdata:/var/lib/rabbitmq/
         - rabbitlog:/var/log/rabbitmq
+        - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+        - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
     networks:
         - trino
 
