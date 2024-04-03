@@ -20,7 +20,8 @@ services:
 #      MINIO_NOTIFY_AMQP_ROUTING_KEY_SERP: xx 
     command: server --console-address ":9001" /data
     networks:
-        - trino
+        - miniotrino
+        
   # To Create Minio bucket and upload iris parquet file.
   mc:
     depends_on:
@@ -43,7 +44,7 @@ services:
       exit 0;
       "
     networks:
-      - trino
+      - miniotrino
     volumes:
       - ./data/iris.parq:/data/iris.parq
 
@@ -62,7 +63,7 @@ services:
         - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
         - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
     networks:
-        - trino
+        - miniotrino
 
   trino-coordinator:
     image: 'trinodb/trino:438'
@@ -72,23 +73,24 @@ services:
     volumes:
       - ./etc:/etc/trino
     networks:
-      - trino
+      - miniotrino
 
   mariadb:
-    image: 'mariadb:latest'
+    image: 'mariadb:lts'
     hostname: mariadb
     ports:
-      - '3306:3306'
+      - '3307:3306'
     environment:
       MYSQL_ROOT_PASSWORD: admin
       MYSQL_USER: admin
       MYSQL_PASSWORD: admin
       MYSQL_DATABASE: metastore_db
+    command: ' --max_allowed_packet=67108864'
     volumes:
       - mariddbdata:/var/lib/mysql
     networks:
-      - trino
-
+      - miniotrino
+    
   hive-metastore:
     hostname: hive-metastore
     image: 'bitsondatadev/hive-metastore:latest'
@@ -101,10 +103,10 @@ services:
     depends_on:
       - mariadb
     networks:
-      - trino
+      - miniotrino
 
 networks:
-  trino:
+  miniotrino:
     driver: bridge
 
 volumes:
