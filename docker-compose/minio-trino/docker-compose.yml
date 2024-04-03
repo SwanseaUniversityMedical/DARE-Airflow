@@ -60,7 +60,7 @@ services:
     image: 'trinodb/trino:438'
     hostname: trino-coordinator
     ports:
-      - '8080:8080'
+      - '8090:8080'
     volumes:
       - ./etc:/etc/trino
     networks:
