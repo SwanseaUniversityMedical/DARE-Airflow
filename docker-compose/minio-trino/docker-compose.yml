@@ -37,6 +37,9 @@ services:
       /usr/bin/mc rm -r --force minio/data;
       /usr/bin/mc mb minio/data;
       /usr/bin/mc policy set public minio/data;
+      /usr/bin/mc rm -r --force minio/loading;
+      /usr/bin/mc mb minio/loading;
+      /usr/bin/mc policy set public minio/loading;
       exit 0;
       "
     networks:
