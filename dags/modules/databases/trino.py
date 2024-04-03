@@ -57,7 +57,7 @@ def get_trino_engine(trino_conn_details: dict) -> sqlalchemy.engine.Engine:
     engine = create_engine(
         f"trino://{username}@{host}:{port}/{database}",
         connect_args={
-            "http_scheme": "https",
+            "http_scheme": "http",
             # TODO This needs to be set to true when deploying to anything thats not dev
             "verify": False
         },
