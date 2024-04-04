@@ -44,6 +44,9 @@ services:
       /usr/bin/mc rm -r --force minio/loading;
       /usr/bin/mc mb minio/loading;
       /usr/bin/mc policy set public minio/loading;
+      /usr/bin/mc rm -r --force minio/working;
+      /usr/bin/mc mb minio/working;
+      /usr/bin/mc policy set public minio/working;
       exit 0;
       "
     networks:

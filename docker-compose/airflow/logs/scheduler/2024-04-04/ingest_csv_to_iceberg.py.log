@@ -1,0 +1,82 @@
+[2024-04-04T20:48:00.959+0000] {processor.py:161} INFO - Started process (PID=36) to work on /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:48:00.963+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/ingest_csv_to_iceberg.py for tasks to queue
+[2024-04-04T20:48:00.970+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:48:00.969+0000] {dagbag.py:538} INFO - Filling up the DagBag from /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:48:03.342+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:48:03.340+0000] {ingest_csv_to_iceberg.py:34} INFO - DAG parsing...
+[2024-04-04T20:48:03.433+0000] {logging_mixin.py:188} WARNING - /home/airflow/.local/lib/python3.10/site-packages/airflow/models/dagbag.py:344 RemovedInAirflow3Warning: airflow.operators.python.task is deprecated. Please use the following instead
+
+        from airflow.decorators import task
+        @task
+        def my_task()
+[2024-04-04T20:48:03.456+0000] {processor.py:840} INFO - DAG(s) 'ingest_csv_to_iceberg' retrieved from /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:48:04.270+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:48:04.267+0000] {override.py:1769} INFO - Created Permission View: can delete on DAG:ingest_csv_to_iceberg
+[2024-04-04T20:48:04.326+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:48:04.325+0000] {override.py:1769} INFO - Created Permission View: can read on DAG:ingest_csv_to_iceberg
+[2024-04-04T20:48:04.360+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:48:04.358+0000] {override.py:1769} INFO - Created Permission View: can edit on DAG:ingest_csv_to_iceberg
+[2024-04-04T20:48:04.362+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:48:04.362+0000] {dag.py:3036} INFO - Sync 1 DAGs
+[2024-04-04T20:48:04.407+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:48:04.406+0000] {dag.py:3058} INFO - Creating ORM DAG for ingest_csv_to_iceberg
+[2024-04-04T20:48:04.412+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:48:04.412+0000] {dag.py:3823} INFO - Setting next_dagrun for ingest_csv_to_iceberg to None, run_after=None
+[2024-04-04T20:48:04.555+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/ingest_csv_to_iceberg.py took 3.613 seconds
+[2024-04-04T20:48:34.689+0000] {processor.py:161} INFO - Started process (PID=50) to work on /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:48:34.691+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/ingest_csv_to_iceberg.py for tasks to queue
+[2024-04-04T20:48:34.695+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:48:34.694+0000] {dagbag.py:538} INFO - Filling up the DagBag from /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:48:35.117+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:48:35.117+0000] {ingest_csv_to_iceberg.py:34} INFO - DAG parsing...
+[2024-04-04T20:48:35.139+0000] {logging_mixin.py:188} WARNING - /home/airflow/.local/lib/python3.10/site-packages/airflow/models/dagbag.py:344 RemovedInAirflow3Warning: airflow.operators.python.task is deprecated. Please use the following instead
+
+        from airflow.decorators import task
+        @task
+        def my_task()
+[2024-04-04T20:48:35.144+0000] {processor.py:840} INFO - DAG(s) 'ingest_csv_to_iceberg' retrieved from /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:48:35.180+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:48:35.179+0000] {dag.py:3036} INFO - Sync 1 DAGs
+[2024-04-04T20:48:35.201+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:48:35.201+0000] {dag.py:3823} INFO - Setting next_dagrun for ingest_csv_to_iceberg to None, run_after=None
+[2024-04-04T20:48:35.249+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/ingest_csv_to_iceberg.py took 0.563 seconds
+[2024-04-04T20:49:05.607+0000] {processor.py:161} INFO - Started process (PID=64) to work on /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:49:05.611+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/ingest_csv_to_iceberg.py for tasks to queue
+[2024-04-04T20:49:05.616+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:49:05.615+0000] {dagbag.py:538} INFO - Filling up the DagBag from /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:49:06.314+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:49:06.310+0000] {ingest_csv_to_iceberg.py:34} INFO - DAG parsing...
+[2024-04-04T20:49:06.371+0000] {logging_mixin.py:188} WARNING - /home/airflow/.local/lib/python3.10/site-packages/airflow/models/dagbag.py:344 RemovedInAirflow3Warning: airflow.operators.python.task is deprecated. Please use the following instead
+
+        from airflow.decorators import task
+        @task
+        def my_task()
+[2024-04-04T20:49:06.380+0000] {processor.py:840} INFO - DAG(s) 'ingest_csv_to_iceberg' retrieved from /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:49:06.440+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:49:06.440+0000] {dag.py:3036} INFO - Sync 1 DAGs
+[2024-04-04T20:49:06.489+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:49:06.488+0000] {dag.py:3823} INFO - Setting next_dagrun for ingest_csv_to_iceberg to None, run_after=None
+[2024-04-04T20:49:06.582+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/ingest_csv_to_iceberg.py took 0.984 seconds
+[2024-04-04T20:49:37.010+0000] {processor.py:161} INFO - Started process (PID=78) to work on /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:49:37.017+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/ingest_csv_to_iceberg.py for tasks to queue
+[2024-04-04T20:49:37.021+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:49:37.021+0000] {dagbag.py:538} INFO - Filling up the DagBag from /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:49:37.735+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:49:37.735+0000] {ingest_csv_to_iceberg.py:34} INFO - DAG parsing...
+[2024-04-04T20:49:37.759+0000] {logging_mixin.py:188} WARNING - /home/airflow/.local/lib/python3.10/site-packages/airflow/models/dagbag.py:344 RemovedInAirflow3Warning: airflow.operators.python.task is deprecated. Please use the following instead
+
+        from airflow.decorators import task
+        @task
+        def my_task()
+[2024-04-04T20:49:37.764+0000] {processor.py:840} INFO - DAG(s) 'ingest_csv_to_iceberg' retrieved from /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:49:37.798+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:49:37.797+0000] {dag.py:3036} INFO - Sync 1 DAGs
+[2024-04-04T20:49:37.817+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:49:37.817+0000] {dag.py:3823} INFO - Setting next_dagrun for ingest_csv_to_iceberg to None, run_after=None
+[2024-04-04T20:49:37.871+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/ingest_csv_to_iceberg.py took 0.870 seconds
+[2024-04-04T20:50:08.396+0000] {processor.py:161} INFO - Started process (PID=92) to work on /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:50:08.397+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/ingest_csv_to_iceberg.py for tasks to queue
+[2024-04-04T20:50:08.399+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:50:08.399+0000] {dagbag.py:538} INFO - Filling up the DagBag from /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:50:08.770+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:50:08.770+0000] {ingest_csv_to_iceberg.py:34} INFO - DAG parsing...
+[2024-04-04T20:50:08.786+0000] {logging_mixin.py:188} WARNING - /home/airflow/.local/lib/python3.10/site-packages/airflow/models/dagbag.py:344 RemovedInAirflow3Warning: airflow.operators.python.task is deprecated. Please use the following instead
+
+        from airflow.decorators import task
+        @task
+        def my_task()
+[2024-04-04T20:50:08.790+0000] {processor.py:840} INFO - DAG(s) 'ingest_csv_to_iceberg' retrieved from /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:50:08.818+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:50:08.817+0000] {dag.py:3036} INFO - Sync 1 DAGs
+[2024-04-04T20:50:08.835+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:50:08.835+0000] {dag.py:3823} INFO - Setting next_dagrun for ingest_csv_to_iceberg to None, run_after=None
+[2024-04-04T20:50:08.869+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/ingest_csv_to_iceberg.py took 0.476 seconds
+[2024-04-04T20:50:39.152+0000] {processor.py:161} INFO - Started process (PID=106) to work on /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:50:39.155+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/ingest_csv_to_iceberg.py for tasks to queue
+[2024-04-04T20:50:39.159+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:50:39.158+0000] {dagbag.py:538} INFO - Filling up the DagBag from /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:50:39.645+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:50:39.645+0000] {ingest_csv_to_iceberg.py:34} INFO - DAG parsing...
+[2024-04-04T20:50:39.667+0000] {logging_mixin.py:188} WARNING - /home/airflow/.local/lib/python3.10/site-packages/airflow/models/dagbag.py:344 RemovedInAirflow3Warning: airflow.operators.python.task is deprecated. Please use the following instead
+
+        from airflow.decorators import task
+        @task
+        def my_task()
+[2024-04-04T20:50:39.671+0000] {processor.py:840} INFO - DAG(s) 'ingest_csv_to_iceberg' retrieved from /opt/airflow/dags/ingest_csv_to_iceberg.py
+[2024-04-04T20:50:39.707+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:50:39.707+0000] {dag.py:3036} INFO - Sync 1 DAGs
+[2024-04-04T20:50:39.729+0000] {logging_mixin.py:188} INFO - [2024-04-04T20:50:39.728+0000] {dag.py:3823} INFO - Setting next_dagrun for ingest_csv_to_iceberg to None, run_after=None
+[2024-04-04T20:50:39.774+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/ingest_csv_to_iceberg.py took 0.627 seconds

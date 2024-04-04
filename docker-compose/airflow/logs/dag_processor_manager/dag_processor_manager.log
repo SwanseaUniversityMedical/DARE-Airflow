@@ -1,0 +1,60 @@
+[2024-04-04T20:47:59.613+0000] {manager.py:469} INFO - Processing files using up to 2 processes at a time 
+[2024-04-04T20:47:59.616+0000] {manager.py:470} INFO - Process each file at most once every 30 seconds
+[2024-04-04T20:47:59.619+0000] {manager.py:471} INFO - Checking for new files in /opt/airflow/dags every 300 seconds
+[2024-04-04T20:47:59.622+0000] {manager.py:738} INFO - Searching for files in /opt/airflow/dags
+[2024-04-04T20:48:00.650+0000] {manager.py:741} INFO - There are 2 files in /opt/airflow/dags
+[2024-04-04T20:48:01.174+0000] {manager.py:879} INFO - 
+================================================================================
+DAG File Processing Stats
+
+File Path                                     PID  Runtime      # DAGs    # Errors  Last Runtime    Last Run
+------------------------------------------  -----  ---------  --------  ----------  --------------  ----------
+/opt/airflow/dags/ingest_csv_to_iceberg.py     36  0.31s             0           0
+/opt/airflow/dags/ingest_csv_to_parquet.py     37  0.15s             0           0
+================================================================================
+[2024-04-04T20:48:31.611+0000] {manager.py:879} INFO - 
+================================================================================
+DAG File Processing Stats
+
+File Path                                   PID    Runtime      # DAGs    # Errors  Last Runtime    Last Run
+------------------------------------------  -----  ---------  --------  ----------  --------------  -------------------
+/opt/airflow/dags/ingest_csv_to_iceberg.py                           1           0  3.73s           2024-04-04T20:48:04
+/opt/airflow/dags/ingest_csv_to_parquet.py                           1           0  4.56s           2024-04-04T20:48:05
+================================================================================
+[2024-04-04T20:49:01.936+0000] {manager.py:879} INFO - 
+================================================================================
+DAG File Processing Stats
+
+File Path                                   PID    Runtime      # DAGs    # Errors  Last Runtime    Last Run
+------------------------------------------  -----  ---------  --------  ----------  --------------  -------------------
+/opt/airflow/dags/ingest_csv_to_iceberg.py                           1           0  0.60s           2024-04-04T20:48:35
+/opt/airflow/dags/ingest_csv_to_parquet.py                           1           0  0.79s           2024-04-04T20:48:36
+================================================================================
+[2024-04-04T20:49:31.941+0000] {manager.py:879} INFO - 
+================================================================================
+DAG File Processing Stats
+
+File Path                                   PID    Runtime      # DAGs    # Errors  Last Runtime    Last Run
+------------------------------------------  -----  ---------  --------  ----------  --------------  -------------------
+/opt/airflow/dags/ingest_csv_to_iceberg.py                           1           0  1.05s           2024-04-04T20:49:06
+/opt/airflow/dags/ingest_csv_to_parquet.py                           1           0  1.01s           2024-04-04T20:49:08
+================================================================================
+[2024-04-04T20:50:02.293+0000] {manager.py:879} INFO - 
+================================================================================
+DAG File Processing Stats
+
+File Path                                   PID    Runtime      # DAGs    # Errors  Last Runtime    Last Run
+------------------------------------------  -----  ---------  --------  ----------  --------------  -------------------
+/opt/airflow/dags/ingest_csv_to_iceberg.py                           1           0  0.92s           2024-04-04T20:49:37
+/opt/airflow/dags/ingest_csv_to_parquet.py                           1           0  1.59s           2024-04-04T20:49:40
+================================================================================
+[2024-04-04T20:50:32.609+0000] {manager.py:879} INFO - 
+================================================================================
+DAG File Processing Stats
+
+File Path                                   PID    Runtime      # DAGs    # Errors  Last Runtime    Last Run
+------------------------------------------  -----  ---------  --------  ----------  --------------  -------------------
+/opt/airflow/dags/ingest_csv_to_iceberg.py                           1           0  0.51s           2024-04-04T20:50:08
+/opt/airflow/dags/ingest_csv_to_parquet.py                           1           0  0.92s           2024-04-04T20:50:11
+================================================================================
+[2024-04-04T20:50:44.916+0000] {manager.py:451} INFO - Exiting gracefully upon receiving signal 15
