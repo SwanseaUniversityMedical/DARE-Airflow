@@ -2,6 +2,15 @@
 
 Convert CSV to TRINO, using Airflow DAGS, messaged by rabbitmq from minio
 
+## AREAS for imporovement
+- Big issue with using DAH_ID+try number for temp table, if task fails over the try count resets so then table existis if using debug.  Might be better off with a GUID and the eTAG ?
+- use extra settings from trino connection
+- Create ledger rabbitMQ message uploading
+- Handle recording of failed loading / conversion
+- Dataset name and version - could come from S3 object TAG if set
+- how to handle version
+- handle re-loading (overite)
+- optional to append GUID
 
 ## Airflow Configuration
 Airflow needs 3 connections (s3/rabbitmq/trino)

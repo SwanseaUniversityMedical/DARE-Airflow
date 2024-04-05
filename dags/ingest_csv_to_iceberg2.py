@@ -51,6 +51,7 @@ def unpack_minio_event(message):
 
     full_file_path = message_json['Key']
     head_path = '/'.join(full_file_path.split('/')[:-1])
+    filename = full_file_path.split("/")[-1].split(".")[0]
 
     return dict(
         user=user,
@@ -60,7 +61,8 @@ def unpack_minio_event(message):
         file_name=file_name,
         dir_name=dir_name,
         full_file_path=full_file_path,
-        head_path=head_path
+        head_path=head_path,
+        filename=filename
     )
 
 
@@ -107,9 +109,26 @@ def pyarrow_to_trino_schema(schema):
     
     return ',\n'.join(trino_schema)
 
-def ingest_csv_to_iceberg(dataset, ingest_bucket, ingest_key, ingest_delete, debug):
+def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key, ingest_delete, debug):
 
     ########################################################################
+    # Key settings
+
+    load_layer_bucket = "loading"
+    load_layer_schema = "temp"
+
+    base_layer_bucket = "working"
+
+    append_GUID = True
+ 
+    # dataset is first folder
+    if dataset == '':
+        dataset = 'none'
+
+    # version will be folder between datasetname and file/object
+
+    ########################################################################
+
     logging.info("Starting function ingest_csv_to_iceberg...")
 
     # Extract the Airflow context object for this run of the DAG
@@ -171,9 +190,9 @@ def ingest_csv_to_iceberg(dataset, ingest_bucket, ingest_key, ingest_delete, deb
     logging.info(f"ingest={ingest}")
     ti.xcom_push("ingest", ingest)
 
-    hive_schema = "minio.csv"
+    hive_schema = load_layer_schema
     hive_table = validate_identifier(f"{hive_schema}.{dataset}_{dag_id}")
-    hive_bucket = "loading"
+    hive_bucket = load_layer_bucket
     hive_dir = validate_s3_key(f"ingest/{dataset}/{dag_id}")
     hive_file, _ = os.path.splitext(ingest_file)
     hive_key = f"{hive_dir}/{hive_file}.parquet"
@@ -190,9 +209,15 @@ def ingest_csv_to_iceberg(dataset, ingest_bucket, ingest_key, ingest_delete, deb
     logging.info(f"hive={hive}")
     ti.xcom_push("hive", hive)
 
-    iceberg_schema = "iceberg.ingest"
-    iceberg_table = validate_identifier(f"{iceberg_schema}.{dataset}_{dag_id}")
-    iceberg_bucket = "working"
+    iceberg_schema = f"iceberg.{dataset}" #"iceberg.ingest"    
+    #iceberg_table = validate_identifier(f"{iceberg_schema}.{dataset}_{dag_id}")
+    tablename_ext = ""
+    if not version:
+        tablename_ext = tablename_ext + f"_{version}"
+    if append_GUID:
+        tablename_ext = tablename_ext + f"_{dag_id}"
+    iceberg_table = validate_identifier(f"{iceberg_schema}.{tablename}{tablename_ext}")
+    iceberg_bucket = base_layer_bucket
     iceberg_dir = validate_s3_key(f"ingest/{dataset}/{dag_id}")
     iceberg_path = validate_s3_key(f"{iceberg_bucket}/{iceberg_dir}")
     iceberg = {
@@ -313,7 +338,7 @@ with DAG(
         event = unpack_minio_event(message)
         logging.info(f"event={event}")
 
-        ingest_csv_to_iceberg(event['dir_name'], event['bucket'],event['src_file_path'],False,True)
+        ingest_csv_to_iceberg(event['dir_name'], event['filename'], "99",  event['bucket'],event['src_file_path'],False,True)
 
 
 
