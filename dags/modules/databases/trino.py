@@ -89,6 +89,7 @@ def create_schema(trino: sqlalchemy.engine.Engine, schema: str, location: str):
             f"WITH (" \
             f"location='s3a://{validate_s3_key(location)}/'" \
             f")"
+    logger.info(f"trino={query}")
     trino.execute(query)
 
 

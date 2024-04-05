@@ -16,6 +16,7 @@ from airflow.hooks.base import BaseHook
 from modules.providers.operators.rabbitmq import RabbitMQPythonOperator
 from modules.databases.duckdb import s3_csv_to_parquet
 from modules.utils.s3 import s3_delete
+from modules.utils.s3 import s3_create_bucket
 from modules.utils.sql import escape_dataset
 from modules.utils.sha1 import sha1
 from modules.databases.trino import (
@@ -109,21 +110,26 @@ def pyarrow_to_trino_schema(schema):
     
     return ',\n'.join(trino_schema)
 
+
+
+
 def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key, ingest_delete, debug):
 
     ########################################################################
     # Key settings
 
     load_layer_bucket = "loading"
-    load_layer_schema = "temp"
+    load_layer_schema = "minio.par"  # database and schema
 
     base_layer_bucket = "working"
+    base_layer_bucket_dataset_specific = True
 
     append_GUID = True
  
     # dataset is first folder
     if dataset == '':
         dataset = 'none'
+    dataset = dataset.lower()
 
     # version will be folder between datasetname and file/object
 
@@ -176,8 +182,12 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
     logging.info(f"ingest_delete={ingest_delete}")
     assert isinstance(ingest_delete, bool)
 
-    # Base name of the dataset to provision, defaults to an escaped version of the path
-    #dataset = escape_dataset(conf.get("dataset", ingest_path))
+
+    # if using dataset buckets, check we have the target bucket
+    if base_layer_bucket_dataset_specific:
+        logging.info(f"Trying to create S3 Bucket : {dataset}")
+        s3_create_bucket(conn_id="s3_conn",bucket=dataset)
+
 
     ingest = {
         "bucket": ingest_bucket,
@@ -217,7 +227,10 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
     if append_GUID:
         tablename_ext = tablename_ext + f"_{dag_id}"
     iceberg_table = validate_identifier(f"{iceberg_schema}.{tablename}{tablename_ext}")
-    iceberg_bucket = base_layer_bucket
+    if base_layer_bucket_dataset_specific:
+        iceberg_bucket = dataset
+    else:
+        iceberg_bucket = base_layer_bucket
     iceberg_dir = validate_s3_key(f"ingest/{dataset}/{dag_id}")
     iceberg_path = validate_s3_key(f"{iceberg_bucket}/{iceberg_dir}")
     iceberg = {
@@ -244,7 +257,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
         s3_delete(conn_id="s3_conn", bucket=ingest_bucket, key=ingest_key)
 
     ########################################################################
-    logging.info("Gettign schema fromt he new PAR file")
+    logging.info("Getting schema fromt he new PAR file")
     s3_conn = json.loads(BaseHook.get_connection("s3_conn").get_extra())
 
     fs = s3fs.S3FileSystem(
@@ -256,10 +269,8 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
 
     with fs.open(F"s3://{hive_bucket}/{hive_key}", "rb") as fp:
         schema: pq.lib.Schema = pq.ParquetFile(fp).schema
-    logging.info(f"pyarrow schema={schema}")
-
     trino_schema = pyarrow_to_trino_schema(schema)
-    logging.info(f"trino schema={trino_schema}")
+    #logging.info(f"trino schema={trino_schema}")
 
     ########################################################################
 
@@ -269,10 +280,10 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
     trino_conn = get_trino_conn_details()
     trino = get_trino_engine(trino_conn)
 
-    logging.info("Create schema in Hive connector...")
+    logging.info(f"Create schema [{hive_schema}] in Hive connector...")
     create_schema(trino, schema=hive_schema, location=hive_bucket)
 
-    logging.info("Create schema in Iceberg connector...")
+    logging.info(f"Create schema [{iceberg_schema}] in Iceberg connector...")
     create_schema(trino, schema=iceberg_schema, location=iceberg_bucket)
 
     try:
