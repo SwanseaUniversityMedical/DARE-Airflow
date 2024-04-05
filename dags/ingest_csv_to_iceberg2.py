@@ -3,7 +3,10 @@ import hashlib
 import os.path
 import logging
 import pendulum
+import pyarrow.parquet as pq
+import boto3
 import json
+import s3fs
 from airflow import DAG
 from airflow.operators.python import get_current_context, task
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
@@ -65,6 +68,44 @@ def sha1(value):
     sha_1 = hashlib.sha1()
     sha_1.update(str(value).encode('utf-8'))
     return sha_1.hexdigest()
+
+def pyarrow_to_trino_schema(schema):
+    trino_schema = []
+
+    for field in schema:
+        # Extract field name and data type
+        field_name = field.name
+        field_type = str(field.logical_type)
+        logging.info(f"pyarrow schema: {field_name} is {field_type} ({field.physical_type})")
+
+        # Convert PyArrow data type to Trino-compatible data type
+        if field_type == 'int64':
+            trino_type = 'BIGINT'
+        elif field_type.startswith('Int'):
+            if field.physical_type == 'INT64':
+                trino_type = 'BIGINT'
+            else:
+                trino_type = 'INTEGER'
+        elif field_type.startswith('Float'):
+            trino_type = 'DOUBLE'        
+        elif field_type.startswith('String'):
+            trino_type = 'VARCHAR'
+        elif field_type == 'Object':
+            trino_type = 'VARCHAR'
+        elif field_type.startswith('Bool'):
+            trino_type = 'BOOLEAN'
+        elif field_type.startswith('Timestamp'):
+            trino_type = 'TIMESTAMP'
+        elif field_type.startswith('Date'):
+            trino_type = 'DATE'
+        else:
+            # Use VARCHAR as default for unsupported types
+            trino_type = 'VARCHAR'
+        
+        # Append field definition to Trino schema
+        trino_schema.append(f'{field_name} {trino_type}')
+    
+    return ',\n'.join(trino_schema)
 
 def ingest_csv_to_iceberg(dataset, ingest_bucket, ingest_key, ingest_delete, debug):
 
@@ -178,7 +219,26 @@ def ingest_csv_to_iceberg(dataset, ingest_bucket, ingest_key, ingest_delete, deb
         s3_delete(conn_id="s3_conn", bucket=ingest_bucket, key=ingest_key)
 
     ########################################################################
-    logging.info("Mounting CSV on s3 into Hive connector and copy to Iceberg...")
+    logging.info("Gettign schema fromt he new PAR file")
+    s3_conn = json.loads(BaseHook.get_connection("s3_conn").get_extra())
+
+    fs = s3fs.S3FileSystem(
+        endpoint_url=s3_conn["endpoint_url"],
+        key=s3_conn["aws_access_key_id"],
+        secret=s3_conn["aws_secret_access_key"],
+        use_ssl=False
+    )
+
+    with fs.open(F"s3://{hive_bucket}/{hive_key}", "rb") as fp:
+        schema: pq.lib.Schema = pq.ParquetFile(fp).schema
+    logging.info(f"pyarrow schema={schema}")
+
+    trino_schema = pyarrow_to_trino_schema(schema)
+    logging.info(f"trino schema={trino_schema}")
+
+    ########################################################################
+
+    logging.info("Mounting PAR on s3 into Hive connector and copy to Iceberg...")
 
     # Create a connection to Trino
     trino_conn = get_trino_conn_details()
@@ -195,7 +255,8 @@ def ingest_csv_to_iceberg(dataset, ingest_bucket, ingest_key, ingest_delete, deb
         hive_create_table_from_parquet(
             trino,
             table=hive_table,
-            location=hive_path
+            location=hive_path,
+            schema=trino_schema
         )
 
         logging.info("Create table in Iceberg connector...")

@@ -110,9 +110,10 @@ def hive_create_table_from_csv(trino: sqlalchemy.engine.Engine, table: str, colu
     trino.execute(query)
 
 
-def hive_create_table_from_parquet(trino: sqlalchemy.engine.Engine, table: str, location: str):
+def hive_create_table_from_parquet(trino: sqlalchemy.engine.Engine, table: str, location: str, schema: str):
     query = f"CREATE TABLE " \
             f"{validate_identifier(table)} " \
+            f"({schema}) " \
             f"WITH (" \
             f"external_location='s3a://{validate_s3_key(location)}', " \
             f"format='PARQUET'" \
