@@ -66,7 +66,7 @@ def sha1(value):
     sha_1.update(str(value).encode('utf-8'))
     return sha_1.hexdigest()
 
-def ingest_csv_to_iceberg(dataset, ingest_key, ingest_delete, debug):
+def ingest_csv_to_iceberg(dataset, ingest_bucket, ingest_key, ingest_delete, debug):
 
     ########################################################################
     logging.info("Starting function ingest_csv_to_iceberg...")
@@ -110,7 +110,7 @@ def ingest_csv_to_iceberg(dataset, ingest_key, ingest_delete, debug):
 
     ingest_path = os.path.dirname(ingest_key)
     ingest_file = os.path.basename(ingest_key)
-    ingest_bucket = "ingest"
+    #ingest_bucket = "ingest"
 
     #ingest_delete = conf.get("ingest_delete", False)
     logging.info(f"ingest_delete={ingest_delete}")
@@ -251,6 +251,10 @@ with DAG(
 
         event = unpack_minio_event(message)
         logging.info(f"event={event}")
+
+        ingest_csv_to_iceberg(event['dir_name'], event['bucket'],event['src_file_path'],False,True)
+
+
 
     consume_events = RabbitMQPythonOperator(
         func=process_event,

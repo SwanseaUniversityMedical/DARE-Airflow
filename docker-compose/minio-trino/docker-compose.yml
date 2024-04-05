@@ -47,6 +47,9 @@ services:
       /usr/bin/mc rm -r --force minio/working;
       /usr/bin/mc mb minio/working;
       /usr/bin/mc policy set public minio/working;
+      /usr/bin/mc rm -r --force minio/ingest;
+      /usr/bin/mc mb minio/ingest;
+      /usr/bin/mc policy set public minio/ingest;
       exit 0;
       "
     networks:
