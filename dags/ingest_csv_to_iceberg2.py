@@ -10,6 +10,7 @@ from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.hooks.base import BaseHook
 
+from modules.providers.operators.rabbitmq import RabbitMQPythonOperator
 from modules.databases.duckdb import s3_csv_to_parquet
 from modules.utils.s3 import s3_delete
 from modules.utils.sql import escape_dataset
