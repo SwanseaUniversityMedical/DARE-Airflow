@@ -37,6 +37,7 @@ The docker-compose currently creates these buckets **no security is aplied at th
 Access Keys also need creating and given to airflow so the running DAG can access Minio **manual task**
 
 The docker-compose wires up the *MINIO_NOTIFY_AMQP_...* setting to create a link from minio to rabbitmq.  However a **manual** task is to tell minio to send an event upload a file/object being uploaded.  This is done by adding the subscription to the bucket (events tab), selecting the PUT operation.
+![Mino event dialog box](./images/minio-event2.PNG)
 ![Minio events](./images/rminio-events.PNG) --> this should be on the **INGEST** bucekt
 
 This will create a json message uplaod upload which will get sent tot he **minio** exchaneg on rabbit.  This exchange is created by docker-compose, however if not present then minio will create it.
