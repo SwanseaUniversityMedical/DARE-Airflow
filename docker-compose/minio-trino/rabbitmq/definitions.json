@@ -57,7 +57,7 @@
           "name":"minio",
           "vhost":"/",
           "type":"fanout",
-          "durable":false,
+          "durable":true,
           "auto_delete":false,
           "internal":false,
           "arguments":{
