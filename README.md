@@ -41,3 +41,59 @@ The docker-compose wires up the *MINIO_NOTIFY_AMQP_...* setting to create a link
 This will create a json message uplaod upload which will get sent tot he **minio** exchaneg on rabbit.  This exchange is created by docker-compose, however if not present then minio will create it.
 
 The docker-compose creates a queue called **airflow** which binds to this exchange, with airflow obviously ingesting the messages fromt hsi queue
+
+example message
+
+    {
+    "EventName":"s3:ObjectCreated:Put",
+    "Key":"loading/PEDW/20230101/PEDW_DIAG2.csv",
+    "Records":[
+        {
+            "eventVersion":"2.0",
+            "eventSource":"minio:s3",
+            "awsRegion":"",
+            "eventTime":"2024-04-05T08:57:31.324Z",
+            "eventName":"s3:ObjectCreated:Put",
+            "userIdentity":{
+                "principalId":"minio"
+            },
+            "requestParameters":{
+                "principalId":"minio",
+                "region":"",
+                "sourceIPAddress":"172.23.0.1"
+            },
+            "responseElements":{
+                "x-amz-id-2":"dd9025bab4ad464b049177c95eb6ebf374d3b3fd1af9251148b658df7ac2e3e8",
+                "x-amz-request-id":"17C3568E062A6AC0",
+                "x-minio-deployment-id":"21c4d138-2f32-45b9-8481-066ee9b9fe81",
+                "x-minio-origin-endpoint":"http://172.23.0.3:9000"
+            },
+            "s3":{
+                "s3SchemaVersion":"1.0",
+                "configurationId":"Config",
+                "bucket":{
+                "name":"loading",
+                "ownerIdentity":{
+                    "principalId":"minio"
+                },
+                "arn":"arn:aws:s3:::loading"
+                },
+                "object":{
+                "key":"PEDW%2F20230101%2FPEDW_DIAG2.csv",
+                "size":7070,
+                "eTag":"1c7915281bcf29f9469def4bc9bc91c9",
+                "contentType":"text/csv",
+                "userMetadata":{
+                    "content-type":"text/csv"
+                },
+                "sequencer":"17C3568E062F2AA7"
+                }
+            },
+            "source":{
+                "host":"172.23.0.1",
+                "port":"",
+                "userAgent":"MinIO (linux; amd64) minio-go/v7.0.69 MinIO Console/(dev)"
+            }
+        }
+    ]
+    }
