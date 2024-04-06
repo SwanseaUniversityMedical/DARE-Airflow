@@ -19,6 +19,7 @@ from modules.utils.s3 import s3_delete
 from modules.utils.s3 import s3_create_bucket
 from modules.utils.sql import escape_dataset
 from modules.utils.sha1 import sha1
+from modules.utils.minioevent import unpack_minio_event
 from modules.databases.trino import (
     create_schema,
     drop_table,
@@ -29,42 +30,6 @@ from modules.databases.trino import (
     validate_identifier,
     validate_s3_key
 )
-
-def unpack_minio_event(message):
-    import json
-
-    logging.info("Decoding minio event as JSON")
-    message_json = json.loads(message)
-
-    records = message_json["Records"][0]
-
-    s3_object = records["s3"]["object"]
-
-    user = records["userIdentity"]["principalId"]
-    bucket = records["s3"]["bucket"]["name"]
-    etag = s3_object["eTag"]
-
-    src_file_path: str = s3_object["key"].replace('%2F', '/')
-    assert src_file_path.endswith(".csv")
-
-    file_name = src_file_path.replace(".csv", "")
-    dir_name = src_file_path.split("/")[0]
-
-    full_file_path = message_json['Key']
-    head_path = '/'.join(full_file_path.split('/')[:-1])
-    filename = full_file_path.split("/")[-1].split(".")[0]
-
-    return dict(
-        user=user,
-        bucket=bucket,
-        src_file_path=src_file_path,
-        etag=etag,
-        file_name=file_name,
-        dir_name=dir_name,
-        full_file_path=full_file_path,
-        head_path=head_path,
-        filename=filename
-    )
 
 
 def sha1(value):
@@ -113,7 +78,7 @@ def pyarrow_to_trino_schema(schema):
 
 
 
-def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key, ingest_delete, debug):
+def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key, dag_id, ingest_delete, debug):
 
     ########################################################################
     # Key settings
@@ -124,7 +89,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
     base_layer_bucket = "working"
     base_layer_bucket_dataset_specific = True
 
-    append_GUID = True
+    append_GUID = False
  
     # dataset is first folder
     if dataset == '':
@@ -156,9 +121,6 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
         f"task_id={ti.task_id}"
     )
     logging.info(f"dag_hash={dag_hash}")
-
-    dag_id = f"{dag_hash}_{ti.try_number}"
-    logging.info(f"dag_id={dag_id}")
 
     ########################################################################
     logging.info("Validate inputs...")
@@ -220,19 +182,22 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
     ti.xcom_push("hive", hive)
 
     iceberg_schema = f"iceberg.{dataset}" #"iceberg.ingest"    
-    #iceberg_table = validate_identifier(f"{iceberg_schema}.{dataset}_{dag_id}")
+    
     tablename_ext = ""
-    if not version:
+    if version:
         tablename_ext = tablename_ext + f"_{version}"
     if append_GUID:
         tablename_ext = tablename_ext + f"_{dag_id}"
     iceberg_table = validate_identifier(f"{iceberg_schema}.{tablename}{tablename_ext}")
+
+    iceberg_bucket = base_layer_bucket
+    iceberg_dir = validate_s3_key(f"{dataset}/{version}")        
     if base_layer_bucket_dataset_specific:
         iceberg_bucket = dataset
-    else:
-        iceberg_bucket = base_layer_bucket
-    iceberg_dir = validate_s3_key(f"ingest/{dataset}/{dag_id}")
+        iceberg_dir = validate_s3_key(f"{version}")
+        
     iceberg_path = validate_s3_key(f"{iceberg_bucket}/{iceberg_dir}")
+    
     iceberg = {
         "schema": iceberg_schema,
         "table": iceberg_table,
@@ -340,18 +305,18 @@ with DAG(
 
         context = get_current_context()
         ti = context['ti']
-        dag_hash = sha1(
-            f"dag_id={ti.dag_id}/"
-            f"run_id={ti.run_id}/"
-            f"task_id={ti.task_id}"
-        )
-
+        
         event = unpack_minio_event(message)
         logging.info(f"event={event}")
 
-        ingest_csv_to_iceberg(event['dir_name'], event['filename'], "99",  event['bucket'],event['src_file_path'],False,True)
-
-
+        ingest_csv_to_iceberg(dataset=event['dir_name'], 
+                              tablename=event['filename'], 
+                              version="20",  
+                              ingest_bucket=event['bucket'],
+                              ingest_key=event['src_file_path'], 
+                              dag_id=event['etag'], 
+                              ingest_delete=False,
+                              debug=True)
 
     consume_events = RabbitMQPythonOperator(
         func=process_event,

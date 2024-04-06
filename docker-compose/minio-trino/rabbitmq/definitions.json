@@ -50,7 +50,25 @@
           "arguments":{
              
           }
-       }
+       },
+       {
+         "name":"afload",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
+         "name":"afregister",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      }
     ],
     "exchanges":[
        {
@@ -69,12 +87,32 @@
        {
           "source":"minio",
           "vhost":"/",
-          "destination":"airflow",
+          "destination":"afload",
           "destination_type":"queue",
           "routing_key":"",
           "arguments":{
              
           }
-       }
+       },
+       {
+         "source":"minio",
+         "vhost":"/",
+         "destination":"afregister",
+         "destination_type":"queue",
+         "routing_key":"",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"minio",
+         "vhost":"/",
+         "destination":"airflow",
+         "destination_type":"queue",
+         "routing_key":"",
+         "arguments":{
+            
+         }
+      }
     ]
  }
