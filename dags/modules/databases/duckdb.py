@@ -9,7 +9,7 @@ from ..utils.s3 import validate_s3_key
 logger = logging.getLogger(__name__)
 
 
-def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: str, dst_key: str, memory: int = 500):
+def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: str, dst_key: str, memory: int = 5):
 
     assert src_key.lower().endswith(".csv")
     assert dst_key.lower().endswith(".parquet")
@@ -22,6 +22,7 @@ def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: s
     endpoint = s3_conn["endpoint_url"]\
         .replace("http://", "").replace("https://", "")
 
+    
     con = duckdb.connect(database=':memory:')
 
     query = f"INSTALL '/opt/duckdb/httpfs.duckdb_extension';" \
@@ -31,7 +32,7 @@ def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: s
             f"SET s3_secret_access_key='{secret_access_key}';" \
             f"SET s3_use_ssl=False;" \
             f"SET s3_url_style='path';" \
-            f"SET memory_limit='{memory}MB'"
+            f"SET memory_limit='{memory}GB'"
     logger.info(f"query={query}")
     con.execute(query)
 

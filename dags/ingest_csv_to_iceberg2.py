@@ -7,6 +7,7 @@ import pyarrow.parquet as pq
 import boto3
 import json
 import s3fs
+from random import randint
 from airflow import DAG
 from airflow.operators.python import get_current_context, task
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
@@ -31,6 +32,10 @@ from modules.databases.trino import (
     validate_s3_key
 )
 
+def random_with_N_digits(n):
+    range_start = 10**(n-1)
+    range_end = (10**n)-1
+    return randint(range_start, range_end)
 
 def sha1(value):
     sha_1 = hashlib.sha1()
@@ -198,7 +203,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
         iceberg_bucket = dataset
         iceberg_dir = validate_s3_key(f"{version}")
         
-    iceberg_path = validate_s3_key(f"{iceberg_bucket}/{iceberg_dir}")
+    iceberg_path = validate_s3_key(f"{iceberg_bucket}/{iceberg_dir}/{tablename}")
     
     iceberg = {
         "schema": iceberg_schema,
@@ -316,7 +321,7 @@ with DAG(
                               version="20",  
                               ingest_bucket=event['bucket'],
                               ingest_key=event['src_file_path'], 
-                              dag_id=event['etag'], 
+                              dag_id=event['etag']+str(random_with_N_digits(4)), 
                               ingest_delete=False,
                               debug=True)
 
