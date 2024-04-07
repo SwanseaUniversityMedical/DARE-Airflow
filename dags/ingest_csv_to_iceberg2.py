@@ -66,6 +66,8 @@ def pyarrow_to_trino_schema(schema):
             trino_type = 'TIMESTAMP'
         elif field_type.startswith('Date'):
             trino_type = 'DATE'
+        elif field_type == 'None':
+            trino_type = field.physical_type
         else:
             # Use VARCHAR as default for unsupported types
             trino_type = 'VARCHAR'
@@ -322,7 +324,7 @@ with DAG(
         func=process_event,
         task_id="consume_events",
         rabbitmq_conn_id="rabbitmq_conn",
-        queue_name="airflow",
+        queue_name="afload",
         deferrable=datetime.timedelta(seconds=120),
         poke_interval=datetime.timedelta(seconds=1),
         retry_delay=datetime.timedelta(seconds=10),
