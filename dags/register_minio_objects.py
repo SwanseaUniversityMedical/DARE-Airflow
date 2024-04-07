@@ -9,6 +9,7 @@ import json
 from airflow import DAG
 from airflow.operators.python import get_current_context, task
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+from airflow.operators.postgres_operator import PostgresOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.hooks.base import BaseHook
 
@@ -52,12 +53,11 @@ with DAG(
         )
         cur = conn.cursor()
 
-        value_to_insert = int(event["etag"])
-        cur.execute(f"INSERT INTO register (etag)
-        SELECT '{value_to_insert}'
-        WHERE NOT EXISTS (
-            SELECT 1 FROM your_table_name WHERE column_name = '{value_to_insert}'
-        )")
+        value_to_insert = event["etag"]
+        logging.info(f"register adding eTag = {value_to_insert}")
+
+        sql = f"INSERT INTO register (etag) SELECT '{value_to_insert}'  WHERE NOT EXISTS (SELECT 1 FROM register WHERE etag = '{value_to_insert}' )"
+        cur.execute(sql)
         conn.commit()
         cur.close()
         conn.close()
@@ -74,6 +74,17 @@ with DAG(
         retries=999999999,
     )
 
+    create_register_table_task = PostgresOperator(
+        task_id='create_register_table',
+        postgres_conn_id='pg_conn',
+        sql='''
+        CREATE TABLE IF NOT EXISTS register (
+            etag VARCHAR(50)
+        );
+        ''',
+        dag=dag,
+    )
+
     # If the consumer task fails and isn't restarted, restart the whole DAG
     restart_dag = TriggerDagRunOperator(
         task_id="restart_dag",
@@ -81,4 +92,4 @@ with DAG(
         trigger_rule=TriggerRule.ALL_DONE
     )
 
-    consume_events >> restart_dag
+    create_register_table_task >> consume_events >> restart_dag
