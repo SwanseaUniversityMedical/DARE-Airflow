@@ -2,15 +2,63 @@
 
 Convert CSV to TRINO, using Airflow DAGS, messaged by rabbitmq from minio
 
+## Table of Contents
+- [Overview](#overall-architecture)
+- [Areas for Improvement](#areas-for-imporovement)
+- [Airflow configuration](#areas-for-imporovement)
+- [Trino Configuration](#trino-configuration)
+- [Minio Configuration](#mino-configuration)
+    - [Example Minio JSON message](#minio-example-message)
+- more stuff ..
+
+
+
+## Overall architecture
+
+The over all architecture is
+
+1. Data loaded into Minio, which has been configured to have a connection to RabbitMQ through its AQMP plugin.  This connector will create a JSON message describing the object in Minio ([Example](#minio-example-message)).  In Mino a bucket can have its events linked to this AQMP cpability and the approach taken is to define the PUT event on a bucket to fire a AQMP/RabbitMQ message. (currently this need to be defined manually)
+
+2. The docker-compose creates the RabbitMQ exchange for Minio to send the events to, this Exchange is called "minio". 
+
+3. The docker-compose defeines Two RabbitMQ queues
+    1. afloading - used to process the data and laod into Trino
+    2. afregister - used to register this object as have been "seen" in the database
+
+4. An Airflow DAG called "ingest_csv_to_iceberg2" subscribes to the RabbitMQ queue "afloading" and is used to read the CSV file from Minio and convert it to parquet and thewn iceberg, while registering this as a table in Trino.  **it will** once the table exists in Trino a new RabbitMQ message is created to inform other processes of this table.
+
+*add link or details to the setting and fact must end in CSV and be in a directory which is the datasets and possible define the version etc*
+
+5. Conversion from CSV to parquet is done through
+    1. DuckDB (used as a library inside the DAG), which can mount an S3 bucket to read CSV, with imputed schema, and then in a single operation write the results of a select * on the source CSV to a output table in S3 choosing Parquet as the table structure.  This approach seem really fast and given it must read ever row for the conversion seems to get the schema correct.  
+    2. The resultant parquet file is then registered in Trino using a Create Table with external location approach, this requires the SQL statement to know the table schema, this is done by PYARROW reading the schema from the S3 parquet object and then converting from PYARROW table datatypes to Trino datatypes to construct the required SQL
+    3. Using Trino the "hive" parquet registered Table to read and inserted into a ICEBERG equiverlant, with Trino doing the conversion from plain Parquet to Iceberg
+    4. Optionally (flags) the original "hive" parquet table can then be removed
+    5. Optionally (flags) the Iceberg tables can use S3 buckets per dataset (created by the system) or place all data int he save S3 Bucket ("working" bucket) in dataset folders.  The purpose of this is to enble the system to be used to load data into trino for actual use or to load into Trino for onward processing and manipulation.
+
+6. An Airflow DAG called "register_minio_objects" subscribes to the RabbitMQ queue "afregister" and it is used to add this object to Postgres.  The purpose of this is to allow a module (**not yet created**) to periodically scan the Minio buckets and pick up any objects that where not picked up by the other DAG.
+    - The reason for this approach is that the link between Minio and RabbitMQ has been show during development to occationally have issues in that Minio can not communicate with RabbitMQ.  Minio doe snot have a re-try capability and therefore should this happen the opertunity to ingest this file/object will have been lost.  Therefore if periodically we sweep the buckets and check against a "register" of what has and what has not been processed, we can fire addional events into RabbitMQ for the "missing" files/objects.
+
+7. TODO
+    1. send RabbitMQ for resultant table in trino
+    2. capture this message and trun into NRDAv2 : Create Ledger
+    3. Scan Minio periodically and detect "missed" files/objects
+    4. Improve detection of errors
+    5. capture table message to populate Assets 3 / DBT configuration YAML
+
+
+
+
+
 ## AREAS for imporovement
-- Big issue with using DAH_ID+try number for temp table, if task fails over the try count resets so then table existis if using debug.  Might be better off with a GUID and the eTAG ?
+- (DONE) Big issue with using DAH_ID+try number for temp table, if task fails over the try count resets so then table existis if using debug.  Might be better off with a GUID and the eTAG ?
 - use extra settings from trino connection
 - Create ledger rabbitMQ message uploading
 - Handle recording of failed loading / conversion
 - Dataset name and version - could come from S3 object TAG if set
 - how to handle version
 - handle re-loading (overite)
-- optional to append GUID
+- (DONE) optional to append GUID
 
 ## Airflow Configuration
 Airflow needs 3 connections (s3/rabbitmq/trino)
@@ -53,7 +101,7 @@ This will create a json message uplaod upload which will get sent tot he **minio
 
 The docker-compose creates a queue called **airflow** which binds to this exchange, with airflow obviously ingesting the messages fromt hsi queue
 
-example message
+### Minio example message
 
     {
     "EventName":"s3:ObjectCreated:Put",
