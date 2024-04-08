@@ -3,6 +3,7 @@
 Convert CSV to TRINO, using Airflow DAGS, messaged by rabbitmq from minio
 
 ## Table of Contents
+- [Contributing Guide](#contributing)
 - [Overview](#overall-architecture)
 - [Areas for Improvement](#areas-for-imporovement)
 - [Airflow configuration](#areas-for-imporovement)
@@ -11,7 +12,31 @@ Convert CSV to TRINO, using Airflow DAGS, messaged by rabbitmq from minio
     - [Example Minio JSON message](#minio-example-message)
 - more stuff ..
 
+## Contributing
 
+CI/CD is configured to run on this repo on open Pull Requests and on Release Pushes to branches such as `main` or to maintenance release branches such as `maintenance/dags-container/1.2.x`.
+
+### On open Pull Requests each time you push to the branch:
+- If the dags code has changed it will be linted with Flake8.
+- If the dags code or the container definition has changed the dags container will be rebuilt and pushed to harbor as `dare/airflow/dags:pr-<N>`.
+- The title of the Pull Request will be linted to ensure it is a valid Conventional-Commit formatted message.
+
+### When a Pull Request is merged into a Release Branch:
+- If the dags code or the container definition has changed the dags container will be rebuilt and pushed to harbor as `dare/airflow/dags:x.y.z`.
+
+### To develop a new feature or bug fix:
+- Update you local version of main to be up to date.
+- Create a new branch from main prefixed by the type of branch: ie. `feat/add-shiny-new-feature` or `fix/not-so-shiny-feature`.
+- Add at least one commit to your branch locally.
+- Push your branch to github.
+- Open the Pull Request from your branch into the desired release branch: ie. `main` or `maintenance/dags-container/1.2.x`.
+- Keep pushing more changes to your branch.
+- Test your progress using the Pull Request tagged containers built by the CI: ie. `dare/airflow/dags:pr-<N>`.
+- Merge only when:
+  - You are satisfied with your code.
+  - The Flake8 linting is passing.
+  - The container build is passing.
+  - Your Pull Request has a valid Conventional-Commit message as it's title.
 
 ## Overall architecture
 
