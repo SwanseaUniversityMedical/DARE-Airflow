@@ -1,0 +1,24 @@
+# Release branches where trunk branches are merge-committed to trigger releases
+
+release:
+- base-branch:
+  - 'main'
+  - 'maintenance/.+/[0-9]+\.([0-9]+|x)\.x'
+
+# Label any maintenance branch, trunk and release
+
+maintenance:
+- base-branch:
+  - 'maintenance/.+/[0-9]+\.([0-9]+|x)\.x'
+
+# Label PRs into the main branch
+
+main:
+- base-branch:
+  - 'main'
+
+# Labels for PRs on asset specific branches
+
+dags-container:
+- base-branch:
+  - '.+/dags-container(/.+)?'

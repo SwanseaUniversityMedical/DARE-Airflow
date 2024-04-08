@@ -1,0 +1,41 @@
+name: DAGs Flake8
+
+on:
+  pull_request:
+    # Ignore PRs on branches specifically intended for other assets
+    branches-ignore: []
+    # Only consider PRs that change files for this asset, including ci scripts
+    paths:
+      - '.github/workflows/dags-flake8.yaml'
+      - '.github/workflows/dags-container.yaml'
+      - 'containers/dags/**'
+      - 'dags/**'
+    # Make sure all workflows that are "required checks" for a given
+    # branch protection rule have the same paths: and branches-ignore:
+    # filters. Otherwise, you can end up in a deadlock waiting on a
+    # required check that will never be executed.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # This linting can be cancelled if there is a newer commit to lint
+  cancel-in-progress: true
+
+jobs:
+  dags-flake8:
+    runs-on:
+      labels: [self-hosted, linux, x64]
+      group: light
+    
+    steps:
+      - name: clone repo
+        uses: actions/checkout@v4
+        
+      - name: install flake8
+        run: pip install flake8
+        
+      - name: install flake8 annotations
+        uses: rbialon/flake8-annotations@v1
+          
+      - name: run flake8
+        run: |
+          flake8 --config=".github/.flake8" dags
