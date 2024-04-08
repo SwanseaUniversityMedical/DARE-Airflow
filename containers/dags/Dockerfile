@@ -13,21 +13,20 @@ ENV PYTHONPATH="/opt/airflow/dags/modules:/opt/airflow/dags/repo/dags/modules:${
 USER airflow
 
 # Install additional python dependencies
-COPY containers/airflow/base/requirements.txt .
+COPY containers/dags/requirements.txt .
 RUN pip install --no-cache-dir pyclean && \
     pip install --no-cache-dir -r requirements.txt && \
     pyclean -v /home/airflow/.local && \
     pip uninstall -y pyclean
 
-COPY containers/airflow/base/httpfs.duckdb_extension.gz /opt/duckdb/
+# Install duckdb extensions
+COPY containers/dags/httpfs.duckdb_extension.gz /opt/duckdb/
 USER root
 RUN gzip -d /opt/duckdb/httpfs.duckdb_extension.gz && \
     chown airflow:root /opt/duckdb/httpfs.duckdb_extension
 USER airflow
-
 RUN duckcli -D ":memory:" -e "INSTALL '/opt/duckdb/httpfs.duckdb_extension'; LOAD httpfs" && \
     python3 -c "import duckdb; duckdb.connect(':memory:').sql('LOAD httpfs')"
 
-# Flatten the image
-#FROM scratch
-#COPY --from=build / /
+# Copy dags code
+COPY dags /opt/airflow/dags

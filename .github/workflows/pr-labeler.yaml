@@ -1,0 +1,17 @@
+name: Label PR
+
+on:
+  pull_request:
+    # Run on all PRs whenever they are opened
+    types:
+      - opened
+      - reopened
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # This labelling can be cancelled if there is a newer run
+  cancel-in-progress: true
+
+jobs:
+  pr-labeler:
+    uses: SwanseaUniversityMedical/workflows/.github/workflows/pr-labeler.yaml@v1.0.0-pr-labeler
