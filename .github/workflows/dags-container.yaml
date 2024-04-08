@@ -46,7 +46,7 @@ jobs:
       registry: ${{ vars.HARBOR_REGISTRY }}
       registry-user: ${{ vars.HARBOR_USER }}
       registry-repo: dare/airflow/dags
-      release-tag-format: 'dags-container-${version}'
+      release-tag-format: 'dags-${version}'
       release-branches: |
         [
           'maintenance/dags-container/[0-9]+\.([0-9]+|x)\.x',
