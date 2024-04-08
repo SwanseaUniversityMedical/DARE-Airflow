@@ -75,6 +75,11 @@ services:
         - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
     networks:
         - miniotrino
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
 
   trino-coordinator:
     image: 'trinodb/trino:438'
