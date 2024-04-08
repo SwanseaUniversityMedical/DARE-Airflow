@@ -84,6 +84,9 @@ services:
   trino-coordinator:
     image: 'trinodb/trino:438'
     hostname: trino-coordinator
+    depends_on:
+      - minio
+      - hive-metastore
     ports:
       - '8090:8080'
     volumes:
@@ -110,6 +113,8 @@ services:
   hive-metastore:
     hostname: hive-metastore
     image: 'bitsondatadev/hive-metastore:latest'
+    depends_on:
+      - mariadb
     ports:
       - '9083:9083'
     volumes:
