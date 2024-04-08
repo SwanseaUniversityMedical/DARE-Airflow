@@ -20,11 +20,9 @@ RUN pip install --no-cache-dir pyclean && \
     pip uninstall -y pyclean
 
 # Install duckdb extensions
-COPY containers/dags/httpfs.duckdb_extension.gz /opt/duckdb/
-USER root
-RUN gzip -d /opt/duckdb/httpfs.duckdb_extension.gz && \
-    chown airflow:root /opt/duckdb/httpfs.duckdb_extension
-USER airflow
+RUN duckcli -D ":memory:" -e "INSTALL httpfs; LOAD httpfs" && \
+    python3 -c "import duckdb; duckdb.connect(':memory:').sql('LOAD httpfs')"
+
 
 # Copy dags code
 COPY dags /opt/airflow/dags
