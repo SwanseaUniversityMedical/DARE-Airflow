@@ -1,6 +1,6 @@
 def unpack_minio_event(message):
     import json
-    
+
     message_json = json.loads(message)
 
     records = message_json["Records"][0]
