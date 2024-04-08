@@ -25,8 +25,6 @@ USER root
 RUN gzip -d /opt/duckdb/httpfs.duckdb_extension.gz && \
     chown airflow:root /opt/duckdb/httpfs.duckdb_extension
 USER airflow
-RUN duckcli -D ":memory:" -e "INSTALL '/opt/duckdb/httpfs.duckdb_extension'; LOAD httpfs" && \
-    python3 -c "import duckdb; duckdb.connect(':memory:').sql('LOAD httpfs')"
 
 # Copy dags code
 COPY dags /opt/airflow/dags
