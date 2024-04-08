@@ -9,7 +9,7 @@ from ..utils.s3 import validate_s3_key
 logger = logging.getLogger(__name__)
 
 
-def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: str, dst_key: str, memory: int = 5):
+def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: str, dst_key: str, memory: int = 10):
 
     assert src_key.lower().endswith(".csv")
     assert dst_key.lower().endswith(".parquet")
@@ -23,7 +23,10 @@ def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: s
         .replace("http://", "").replace("https://", "")
 
     
-    con = duckdb.connect(database=':memory:')
+    #con = duckdb.connect(database=':memory:')
+
+    db_path = '/tmp/database.db'
+    con = duckdb.connect(database=db_path)
 
     query = f"INSTALL '/opt/duckdb/httpfs.duckdb_extension';" \
             f"LOAD httpfs;" \
