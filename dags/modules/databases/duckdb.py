@@ -23,9 +23,9 @@ def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: s
         .replace("http://", "").replace("https://", "")
 
     # original duckdb
-    #con = duckdb.connect(database=':memory:')
+    # con = duckdb.connect(database=':memory:')
 
-    # try giving it some disk space ?  
+    # try giving it some disk space ?
     db_path = '/tmp/database.db'
     con = duckdb.connect(database=db_path)
 
