@@ -58,9 +58,9 @@ def s3_delete(conn_id: str, bucket, key):
 
     s3_get_resource(conn_id).Object(bucket, key).delete()
 
+
 def s3_create_bucket(conn_id: str, bucket):
     try:
         s3_get_resource(conn_id).create_bucket(Bucket=bucket.lower())
     except Exception as e:
         print(f"An error occurred while creating the S3 bucket: {e}")
-    
