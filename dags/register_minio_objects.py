@@ -1,13 +1,8 @@
 import datetime
-import hashlib
-import os.path
 import logging
 import pendulum
 import psycopg2
-import boto3
-import json
 from airflow import DAG
-from airflow.operators.python import get_current_context, task
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.operators.postgres_operator import PostgresOperator
 from airflow.utils.trigger_rule import TriggerRule
@@ -33,16 +28,13 @@ with DAG(
         logging.info("Processing message!")
         logging.info(f"message={message}")
 
-        context = get_current_context()
-        ti = context['ti']
-
         event = unpack_minio_event(message)
         logging.info(f"event={event}")
 
-        #Register eTag in postgres if not already there
+        # Register eTag in postgres if not already there
 
         postgres_conn = BaseHook.get_connection('pg_conn')
-        
+
         # Establish connection to PostgreSQL
         conn = psycopg2.connect(
             dbname=postgres_conn.schema,
@@ -61,7 +53,6 @@ with DAG(
         conn.commit()
         cur.close()
         conn.close()
-
 
     consume_events = RabbitMQPythonOperator(
         func=process_event,
