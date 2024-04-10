@@ -7,6 +7,8 @@ import pendulum
 import pyarrow.parquet as pq
 import json
 import s3fs
+import codecs
+import chardet
 from random import randint
 from airflow import DAG
 from airflow.operators.python import get_current_context
@@ -45,6 +47,19 @@ def sha1(value):
     sha_1.update(str(value).encode('utf-8'))
     return sha_1.hexdigest()
 
+def is_utf8(data):
+    result = chardet.detect(data)
+    return result['encoding'] == 'utf-8'
+
+def convert_to_utf8(input_path, output_path):
+    with open(input_path, 'rb') as input_file:
+        with codecs.open(output_path, 'w', encoding='utf-8') as output_file:
+            for line in input_file:
+                try:
+                    decoded_line = line.decode('utf-8')
+                except UnicodeDecodeError:
+                    decoded_line = line.decode('iso-8859-1')
+                output_file.write(decoded_line)
 
 def pyarrow_to_trino_schema(schema):
     trino_schema = []
@@ -237,6 +252,20 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
     down_dest='/tmp/'+ingest_file
     s3_download("s3_conn", bucket_name=ingest_bucket, object_name=ingest_key, local_file_path=down_dest)
 
+    # DUCKDB needs UTF-8 files, so check
+    with open(down_dest, 'rb') as file:
+        in_data = file.read()
+    
+    # Check if file is UTF-8 encoded
+    if is_utf8(in_data):
+        print("File is already UTF-8 encoded. No conversion needed.")
+    else:
+        print("File is not UTF-8 encoded. Converting to UTF-8...")
+        convert_to_utf8(down_dest, 'c-'+down_dest)
+        os.remove(down_dest)
+        down_dest = 'c-'+down_dest
+        print("Conversion complete. New file created:", down_dest)
+
     print(f"DUCKDB convert of file {down_dest}")
     file_csv_to_parquet(src_file=down_dest, dest_file=down_dest+'.parquet' )
 
@@ -319,7 +348,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
 
 with DAG(
     dag_id="ingest_csv_to_iceberg3",
-    schedule=None,
+    schedule="@once",
     start_date=pendulum.datetime(1900, 1, 1, tz="UTC"),
     catchup=True,
     max_active_runs=1,

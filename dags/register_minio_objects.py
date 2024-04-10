@@ -13,7 +13,7 @@ from modules.utils.minioevent import unpack_minio_event
 
 with DAG(
     dag_id="register_minio_objects",
-    schedule=None,
+    schedule="@once",
     start_date=pendulum.datetime(1900, 1, 1, tz="UTC"),
     catchup=True,
     max_active_runs=1,
