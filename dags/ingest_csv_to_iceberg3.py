@@ -53,6 +53,18 @@ def is_utf8(data):
     print(f'Encoding determined to be {result}')
     return result['encoding'] == 'utf-8'
 
+def is_utf8_encoded(file_path, num_rows=10000):
+    try:
+        with open(file_path, 'rb') as file:
+            for _ in range(num_rows):
+                line = file.readline()
+                if not line:
+                    break
+                line.decode('utf-8')
+        return True
+    except UnicodeDecodeError:
+        return False
+
 def convert_to_utf8(input_path, output_path):
     with open(input_path, 'rb') as input_file:
         with codecs.open(output_path, 'w', encoding='utf-8') as output_file:
@@ -256,11 +268,12 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
     s3_download_minio("s3_conn", bucket_name=ingest_bucket, object_name=ingest_key, local_file_path=down_dest)
 
     # DUCKDB needs UTF-8 files, so check
-    with open(down_dest, 'rb') as file:
-        in_data = file.read()
+    #with open(down_dest, 'rb') as file:
+    #    in_data = file.read()
     
     # Check if file is UTF-8 encoded
-    if is_utf8(in_data):
+    print("Testing if file is UTF-8 encoded")
+    if is_utf8_encoded(down_dest):
         print("File is already UTF-8 encoded. No conversion needed.")
     else:
         print("File is not UTF-8 encoded. Converting to UTF-8...")

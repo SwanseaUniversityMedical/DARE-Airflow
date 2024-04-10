@@ -2,7 +2,8 @@ import re
 import json
 import logging
 import boto3
-import minio
+from minio import Minio
+#from minio.error import ResponseError
 import s3fs
 from airflow.hooks.base import BaseHook
 from botocore.config import Config
@@ -72,13 +73,35 @@ def s3_download_minio(conn_id, bucket_name, object_name, local_file_path):
 
     s3_conn = json.loads(BaseHook.get_connection(conn_id).get_extra())
 
-    client = Minio(s3_conn["endpoint_url"],
+    url = str(s3_conn["endpoint_url"]).replace('http://','')
+
+    client = Minio(url,
                access_key=s3_conn["aws_access_key_id"],
                secret_key=s3_conn["aws_secret_access_key"],
                secure=False)
     
-    client.fget_object(bucket_name, object_name, local_file_path)
     
+    #client.fget_object(bucket_name, object_name, local_file_path)
+    
+    #try:
+    # Start a multipart download
+    response = client.get_object(
+        bucket_name,
+        object_name,
+        request_headers={"Range": "bytes=0-"}
+    )
+
+    # Open a file for writing
+    with open(local_file_path, "wb") as file_data:
+        # Iterate over the response data and write it to the file
+        for data in response.stream(32 * 1024):
+            file_data.write(data)
+
+    print("Download successful!")
+
+    #except ResponseError as err:
+    #    print(err)
+
 
 def s3_download(conn_id, bucket_name, object_name, local_file_path):
 
