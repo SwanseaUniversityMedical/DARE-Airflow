@@ -6,7 +6,7 @@ apache-airflow-providers-amazon==8.10.0
 airflow-provider-rabbitmq==0.6.1
 ydata-profiling==4.6.1
 pyarrow==14.0.1
-s3fs==2023.10.0
+s3fs==2023.12.2
 pandas==2.0.3
 polars==0.19.12
 apache-airflow-providers-trino==5.4.0
