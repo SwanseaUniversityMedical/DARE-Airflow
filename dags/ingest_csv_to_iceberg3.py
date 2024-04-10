@@ -49,6 +49,7 @@ def sha1(value):
 
 def is_utf8(data):
     result = chardet.detect(data)
+    print(f'Encoding determined to be {result}')
     return result['encoding'] == 'utf-8'
 
 def convert_to_utf8(input_path, output_path):
@@ -261,12 +262,13 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
         print("File is already UTF-8 encoded. No conversion needed.")
     else:
         print("File is not UTF-8 encoded. Converting to UTF-8...")
-        convert_to_utf8(down_dest, 'c-'+down_dest)
+        down_dest2 = down_dest.replace('/tmp/','/tmp/c-')
+        convert_to_utf8(down_dest, down_dest2)
         os.remove(down_dest)
-        down_dest = 'c-'+down_dest
+        down_dest = down_dest2
         print("Conversion complete. New file created:", down_dest)
 
-    print(f"DUCKDB convert of file {down_dest}")
+    print(f"DUCKDB convert to parquet of file {down_dest}")
     file_csv_to_parquet(src_file=down_dest, dest_file=down_dest+'.parquet' )
 
     print(f"Uploading to S3 {hive_bucket} - {hive_key}")
