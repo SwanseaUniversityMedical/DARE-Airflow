@@ -82,7 +82,7 @@ services:
       retries: 3
 
   trino-coordinator:
-    image: 'trinodb/trino:438'
+    image: 'trinodb/trino:444'
     hostname: trino-coordinator
     depends_on:
       - minio
