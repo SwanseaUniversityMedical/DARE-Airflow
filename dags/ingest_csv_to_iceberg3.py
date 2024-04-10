@@ -22,6 +22,7 @@ from modules.databases.duckdb import file_csv_to_parquet
 from modules.utils.s3 import s3_delete
 from modules.utils.s3 import s3_create_bucket
 from modules.utils.s3 import s3_download
+from modules.utils.s3 import s3_download_minio
 from modules.utils.s3 import s3_upload
 from modules.utils.minioevent import unpack_minio_event
 from modules.databases.trino import (
@@ -248,10 +249,11 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
     ########################################################################
 
     # Use DUCKDB, download, convert upload
- 
+    temp_dir = "/home/airflow/"
+
     print(f'Downloading object from S3 from {ingest_bucket} --> {ingest_key}')
-    down_dest='/tmp/'+ingest_file
-    s3_download("s3_conn", bucket_name=ingest_bucket, object_name=ingest_key, local_file_path=down_dest)
+    down_dest=temp_dir+ingest_file
+    s3_download_minio("s3_conn", bucket_name=ingest_bucket, object_name=ingest_key, local_file_path=down_dest)
 
     # DUCKDB needs UTF-8 files, so check
     with open(down_dest, 'rb') as file:
@@ -262,7 +264,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
         print("File is already UTF-8 encoded. No conversion needed.")
     else:
         print("File is not UTF-8 encoded. Converting to UTF-8...")
-        down_dest2 = down_dest.replace('/tmp/','/tmp/c-')
+        down_dest2 = down_dest.replace(temp_dir,temp_dir+'c-')
         convert_to_utf8(down_dest, down_dest2)
         os.remove(down_dest)
         down_dest = down_dest2

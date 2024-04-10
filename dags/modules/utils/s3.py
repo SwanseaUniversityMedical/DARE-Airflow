@@ -2,6 +2,7 @@ import re
 import json
 import logging
 import boto3
+import minio
 import s3fs
 from airflow.hooks.base import BaseHook
 from botocore.config import Config
@@ -65,6 +66,20 @@ def s3_create_bucket(conn_id: str, bucket):
     except Exception as e:
         print(f"An error occurred while creating the S3 bucket: {e}")
 
+
+
+def s3_download_minio(conn_id, bucket_name, object_name, local_file_path):
+
+    s3_conn = json.loads(BaseHook.get_connection(conn_id).get_extra())
+
+    client = Minio(s3_conn["endpoint_url"],
+               access_key=s3_conn["aws_access_key_id"],
+               secret_key=s3_conn["aws_secret_access_key"],
+               secure=False)
+    
+    client.fget_object(bucket_name, object_name, local_file_path)
+    
+
 def s3_download(conn_id, bucket_name, object_name, local_file_path):
 
     s3_conn = json.loads(BaseHook.get_connection(conn_id).get_extra())
@@ -76,7 +91,9 @@ def s3_download(conn_id, bucket_name, object_name, local_file_path):
         aws_secret_access_key=s3_conn["aws_secret_access_key"],
         use_ssl=False )
 
-    client.download_file(bucket_name, object_name, local_file_path)
+    with open(local_file_path, 'wb') as f:
+        client.download_fileobj(bucket_name, object_name, f)
+
 
 def s3_upload(conn_id, src_file, bucket, object_name):
 
