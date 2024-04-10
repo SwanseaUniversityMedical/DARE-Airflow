@@ -64,3 +64,30 @@ def s3_create_bucket(conn_id: str, bucket):
         s3_get_resource(conn_id).create_bucket(Bucket=bucket.lower())
     except Exception as e:
         print(f"An error occurred while creating the S3 bucket: {e}")
+
+def s3_download(conn_id, bucket_name, object_name, local_file_path):
+
+    s3_conn = json.loads(BaseHook.get_connection(conn_id).get_extra())
+
+    client = boto3.client(
+        's3',
+        endpoint_url=s3_conn["endpoint_url"],
+        aws_access_key_id=s3_conn["aws_access_key_id"],
+        aws_secret_access_key=s3_conn["aws_secret_access_key"],
+        use_ssl=False )
+
+    client.download_file(bucket_name, object_name, local_file_path)
+
+def s3_upload(conn_id, src_file, bucket, object_name):
+
+    s3_conn = json.loads(BaseHook.get_connection(conn_id).get_extra())
+
+    client = boto3.client(
+        's3',
+        endpoint_url=s3_conn["endpoint_url"],
+        aws_access_key_id=s3_conn["aws_access_key_id"],
+        aws_secret_access_key=s3_conn["aws_secret_access_key"],
+        use_ssl=False )
+
+    client.upload_file(src_file,bucket,object_name)
+    

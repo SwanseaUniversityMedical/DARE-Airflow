@@ -19,8 +19,7 @@ def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: s
     s3_conn = json.loads(BaseHook.get_connection(conn_id).get_extra())
     access_key_id = s3_conn['aws_access_key_id']
     secret_access_key = s3_conn['aws_secret_access_key']
-    endpoint = s3_conn["endpoint_url"]\
-        .replace("http://", "").replace("https://", "")
+    endpoint = s3_conn["endpoint_url"].replace("http://", "").replace("https://", "")
 
     # original duckdb
     # con = duckdb.connect(database=':memory:')
@@ -42,6 +41,25 @@ def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: s
 
     query = f"COPY (SELECT * FROM 's3://{src_bucket}/{src_key}')" \
             f"TO 's3://{dst_bucket}/{dst_key}'" \
+            f"(FORMAT PARQUET, CODEC 'SNAPPY', ROW_GROUP_SIZE 100000);"
+    logger.info(f"query={query}")
+    con.execute(query)
+
+
+def file_csv_to_parquet(src_file: str, dest_file: str, memory: int = 40):
+    
+    con = duckdb.connect(database=':memory:')
+
+    # try giving it some disk space ?
+    #db_path = '/tmp/database.db'
+    #con = duckdb.connect(database=db_path)
+
+    query = f"SET memory_limit='{memory}GB'"
+    logger.info(f"query={query}")
+    con.execute(query)
+
+    query = f"COPY (SELECT * FROM '{src_file}') " \
+            f"TO '{dest_file}' " \
             f"(FORMAT PARQUET, CODEC 'SNAPPY', ROW_GROUP_SIZE 100000);"
     logger.info(f"query={query}")
     con.execute(query)
