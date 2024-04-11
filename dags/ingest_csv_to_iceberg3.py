@@ -3,15 +3,18 @@ import hashlib
 import os
 import os.path
 import logging
+import time
 import pendulum
 import pyarrow.parquet as pq
 import json
 import s3fs
 import codecs
 import chardet
+import psycopg2
 from random import randint
 from airflow import DAG
 from airflow.operators.python import get_current_context
+from airflow.operators.postgres_operator import PostgresOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.hooks.base import BaseHook
@@ -115,8 +118,31 @@ def pyarrow_to_trino_schema(schema):
 
     return ',\n'.join(trino_schema)
 
+ 
+def tracking_timer(p_conn, etag, variablename, tstart=time.time()):
+    
+    if str(variablename).startswith('s'):
+        diff = 0    
+        whichmarker = str(variablename).replace('s_','d_')
+    else:
+        enddiff = time.time()
+        diff =  enddiff - tstart
+        whichmarker = str(variablename).replace('e_','d_')
 
-def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key, dag_id, ingest_delete, debug):
+    with p_conn.cursor() as cur:
+        sql = f"UPDATE tracking SET {variablename}=NOW(), {whichmarker}={diff} WHERE etag = '{etag}' "
+        cur.execute(sql)
+    p_conn.commit()
+    return time.time()
+
+def tracking_data(p_conn, etag, variablename, data):
+    with p_conn.cursor() as cur:
+            sql = f"UPDATE tracking SET {variablename}={data} WHERE etag = '{etag}' "
+            cur.execute(sql)
+    p_conn.commit()
+
+
+def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucket, ingest_key, dag_id, ingest_delete, debug):
 
     ########################################################################
     # Key settings
@@ -161,6 +187,21 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
     logging.info(f"dag_hash={dag_hash}")
 
     ########################################################################
+
+    postgres_conn = BaseHook.get_connection('pg_conn')
+
+    # Establish connection to PostgreSQL
+    p_conn = psycopg2.connect(
+        dbname=postgres_conn.schema,
+        user=postgres_conn.login,
+        password=postgres_conn.password,
+        host=postgres_conn.host,
+        port=postgres_conn.port
+    )
+    
+
+    ########################################################################
+
     logging.info("Validate inputs...")
 
     # debug = conf.get("debug", False)
@@ -199,6 +240,13 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
     }
     logging.info(f"ingest={ingest}")
     ti.xcom_push("ingest", ingest)
+
+    # create tracking entry
+    with p_conn.cursor() as cur:
+        sql = f"INSERT INTO tracking (etag, dataset, version, label, s_marker, bucket, path) SELECT '{etag}','{dataset}','{version}','{label}', NOW(), '{ingest_bucket}', '{ingest_key}' WHERE NOT EXISTS (SELECT 1 FROM tracking WHERE etag = '{etag}' )"
+        cur.execute(sql)
+    p_conn.commit()
+    x2 = time.time()
 
     hive_schema = load_layer_schema
     hive_table = validate_identifier(f"{hive_schema}.{dataset}_{dag_id}")
@@ -260,12 +308,18 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
 
     ########################################################################
 
+    x = tracking_timer(p_conn, etag, "s_download")
+
     # Use DUCKDB, download, convert upload
     temp_dir = "/home/airflow/"
 
     print(f'Downloading object from S3 from {ingest_bucket} --> {ingest_key}')
     down_dest=temp_dir+ingest_file
     s3_download_minio("s3_conn", bucket_name=ingest_bucket, object_name=ingest_key, local_file_path=down_dest)
+
+    tracking_timer(p_conn, etag, "e_download",x)
+    tracking_data(p_conn,etag,'filesize', os.path.getsize(down_dest))
+    x=tracking_timer(p_conn, etag, "s_convert")
 
     # DUCKDB needs UTF-8 files, so check
     #with open(down_dest, 'rb') as file:
@@ -282,12 +336,20 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
         os.remove(down_dest)
         down_dest = down_dest2
         print("Conversion complete. New file created:", down_dest)
+    
+    tracking_timer(p_conn, etag, "e_convert",x)
+    x=tracking_timer(p_conn, etag, "s_par")
 
     print(f"DUCKDB convert to parquet of file {down_dest}")
     file_csv_to_parquet(src_file=down_dest, dest_file=down_dest+'.parquet' )
 
+    tracking_timer(p_conn, etag, "e_par",x)    
+    x=tracking_timer(p_conn, etag, "s_upload")
+
     print(f"Uploading to S3 {hive_bucket} - {hive_key}")
     s3_upload("s3_conn",down_dest+'.parquet',hive_bucket,hive_key)
+
+    tracking_timer(p_conn, etag, "e_upload",x)
 
     # remove local files
     os.remove(down_dest)
@@ -299,6 +361,9 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
         s3_delete(conn_id="s3_conn", bucket=ingest_bucket, key=ingest_key)
 
     ########################################################################
+
+    x=tracking_timer(p_conn, etag, "s_schema")
+
     logging.info("Getting schema from the new PAR file")
     s3_conn = json.loads(BaseHook.get_connection("s3_conn").get_extra())
 
@@ -314,9 +379,13 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
     trino_schema = pyarrow_to_trino_schema(schema)
     # logging.info(f"trino schema={trino_schema}")
 
+    tracking_data(p_conn, etag, "columns",str(len(trino_schema)))
+    tracking_timer(p_conn, etag, "e_schema",x)
+
     ########################################################################
 
     logging.info("Mounting PAR on s3 into Hive connector and copy to Iceberg...")
+    x=tracking_timer(p_conn, etag, "s_hive")
 
     # Create a connection to Trino
     trino_conn = get_trino_conn_details()
@@ -337,6 +406,9 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
             schema=trino_schema
         )
 
+        tracking_timer(p_conn, etag, "e_schema",x)
+        x=tracking_timer(p_conn, etag, "s_iceberg")
+
         logging.info("Create table in Iceberg connector...")
         iceberg_create_table_from_hive(
             trino,
@@ -344,6 +416,8 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
             hive_table=hive_table,
             location=iceberg_path
         )
+
+        tracking_timer(p_conn, etag, "e_iceberg",x)
 
     finally:
         if debug:
@@ -360,6 +434,11 @@ def ingest_csv_to_iceberg(dataset, tablename, version, ingest_bucket, ingest_key
                 key=hive_key
             )
 
+    ########################################################################
+    # close postgres connection
+    tracking_timer(p_conn, etag, "e_marker",x2)
+
+    p_conn.close()
     ########################################################################
 
 
@@ -386,6 +465,8 @@ with DAG(
         ingest_csv_to_iceberg(dataset=event['dir_name'],
                               tablename=event['filename'],
                               version="20",
+                              label="",
+                              etag = event['etag'],
                               ingest_bucket=event['bucket'],
                               ingest_key=event['src_file_path'],
                               dag_id=event['etag']+str(random_with_N_digits(4)),
@@ -403,6 +484,47 @@ with DAG(
         retries=999999999,
     )
 
+    create_tracking_table_task = PostgresOperator(
+        task_id='create_tracking_table',
+        postgres_conn_id='pg_conn',  #drop table if exists tracking ;
+        sql='''                
+CREATE TABLE IF NOT EXISTS tracking (
+            etag VARCHAR(50), 
+bucket VARCHAR(50),
+path VARCHAR(500),
+s_marker timestamp,
+e_marker timestamp,
+d_marker INT,
+dataset VARCHAR(100),
+version VARCHAR(50),
+label VARCHAR(50),
+filesize INT,
+columns INT,
+s_download timestamp,
+e_download timestamp,
+d_download INT,
+s_convert timestamp,
+e_convert timestamp,
+d_convert INT,
+s_par timestamp,
+e_par timestamp,
+d_par INT,
+s_upload timestamp,
+e_upload timestamp,
+d_upload INT,
+s_schema timestamp,
+e_schema timestamp,
+d_schema INT,
+s_hive timestamp,
+e_hive timestamp,
+d_hive INT,
+s_iceberg timestamp,
+e_iceberg timestamp,
+d_iceberg INT
+        );
+        ''',
+        dag=dag,
+    )
     # If the consumer task fails and isn't restarted, restart the whole DAG
     restart_dag = TriggerDagRunOperator(
         task_id="restart_dag",
@@ -410,4 +532,4 @@ with DAG(
         trigger_rule=TriggerRule.ALL_DONE
     )
 
-    consume_events >> restart_dag
+    create_tracking_table_task >> consume_events >> restart_dag
