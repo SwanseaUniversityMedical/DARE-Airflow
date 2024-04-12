@@ -343,7 +343,8 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
     print(f"DUCKDB convert to parquet of file {down_dest}")
     file_csv_to_parquet(src_file=down_dest, dest_file=down_dest+'.parquet' )
 
-    tracking_timer(p_conn, etag, "e_par",x)    
+    tracking_timer(p_conn, etag, "e_par",x) 
+    tracking_data(p_conn,etag,'filesize_par', os.path.getsize(down_dest+'.parquet'))   
     x=tracking_timer(p_conn, etag, "s_upload")
 
     print(f"Uploading to S3 {hive_bucket} - {hive_key}")
@@ -498,7 +499,8 @@ d_marker INT,
 dataset VARCHAR(100),
 version VARCHAR(50),
 label VARCHAR(50),
-filesize INT,
+filesize BIGINT,
+filesize_par BIGINT,
 columns INT,
 s_download timestamp,
 e_download timestamp,
