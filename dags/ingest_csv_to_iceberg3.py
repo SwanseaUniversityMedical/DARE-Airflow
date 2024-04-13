@@ -56,17 +56,6 @@ def is_utf8(data):
     print(f'Encoding determined to be {result}')
     return result['encoding'] == 'utf-8'
 
-def is_utf8_encoded(file_path, num_rows=10000):
-    try:
-        with open(file_path, 'rb') as file:
-            for _ in range(num_rows):
-                line = file.readline()
-                if not line:
-                    break
-                line.decode('utf-8')
-        return True
-    except UnicodeDecodeError:
-        return False
 
 def convert_to_utf8(input_path, output_path):
     with open(input_path, 'rb') as input_file:
@@ -294,68 +283,78 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
     logging.info(f"iceberg={iceberg}")
     ti.xcom_push("iceberg", iceberg)
 
-    ########################################################################
+    # Use streaming ?
+    if False :
+        ########################################################################
+        x=tracking_timer(p_conn, etag, "s_par")
+
+        # Use DUCKDB S3 to S3
+        logging.info("Convert from ingest bucket CSV to loading bucket Parquet using DuckDB...")
+        s3_csv_to_parquet(
+            conn_id="s3_conn",
+            src_bucket=ingest_bucket,
+            src_key=ingest_key,
+            dst_bucket=hive_bucket,
+            dst_key=hive_key
+        )
+
+        tracking_timer(p_conn, etag, "e_par",x) 
+
+        ########################################################################
     
-    # Use DUCKDB S3 to S3
-    #logging.info("Convert from ingest bucket CSV to loading bucket Parquet using DuckDB...")
-    #s3_csv_to_parquet(
-    #    conn_id="s3_conn",
-    #    src_bucket=ingest_bucket,
-    #    src_key=ingest_key,
-    #    dst_bucket=hive_bucket,
-    #    dst_key=hive_key
-    #)
-
-    ########################################################################
-
-    x = tracking_timer(p_conn, etag, "s_download")
-
-    # Use DUCKDB, download, convert upload
-    temp_dir = "/home/airflow/"
-
-    print(f'Downloading object from S3 from {ingest_bucket} --> {ingest_key}')
-    down_dest=temp_dir+ingest_file
-    s3_download_minio("s3_conn", bucket_name=ingest_bucket, object_name=ingest_key, local_file_path=down_dest)
-
-    tracking_timer(p_conn, etag, "e_download",x)
-    tracking_data(p_conn,etag,'filesize', os.path.getsize(down_dest))
-    x=tracking_timer(p_conn, etag, "s_convert")
-
-    # DUCKDB needs UTF-8 files, so check
-    #with open(down_dest, 'rb') as file:
-    #    in_data = file.read()
-    
-    # Check if file is UTF-8 encoded
-    print("Testing if file is UTF-8 encoded")
-    if is_utf8_encoded(down_dest):
-        print("File is already UTF-8 encoded. No conversion needed.")
     else:
-        print("File is not UTF-8 encoded. Converting to UTF-8...")
-        down_dest2 = down_dest.replace(temp_dir,temp_dir+'c-')
-        convert_to_utf8(down_dest, down_dest2)
+    
+        x = tracking_timer(p_conn, etag, "s_download")
+
+        # Use DUCKDB, download, convert upload
+        temp_dir = "/home/airflow/"
+
+        print(f'Downloading object from S3 from {ingest_bucket} --> {ingest_key}')
+        down_dest=temp_dir+ingest_file
+        s3_download_minio("s3_conn", bucket_name=ingest_bucket, object_name=ingest_key, local_file_path=down_dest)
+
+        tracking_timer(p_conn, etag, "e_download",x)
+        tracking_data(p_conn,etag,'filesize', os.path.getsize(down_dest))
+        x=tracking_timer(p_conn, etag, "s_convert")
+
+        # DUCKDB needs UTF-8 files, so check
+        #with open(down_dest, 'rb') as file:
+        #    in_data = file.read()
+        
+        # Check if file is UTF-8 encoded
+        print("Testing if file is UTF-8 encoded")
+        with open(down_dest, 'rb') as file:
+            testdata = file.read(5000)
+            #if is_utf8(testdata):
+            if False:
+                print("File is already UTF-8 encoded. No conversion needed.")
+            else:
+                print("File is not UTF-8 encoded. Converting to UTF-8...")
+                down_dest2 = down_dest.replace(temp_dir,temp_dir+'c-')
+                convert_to_utf8(down_dest, down_dest2)
+                os.remove(down_dest)
+                down_dest = down_dest2
+                print("Conversion complete. New file created:", down_dest)
+            
+        tracking_timer(p_conn, etag, "e_convert",x)
+        x=tracking_timer(p_conn, etag, "s_par")
+
+        print(f"DUCKDB convert to parquet of file {down_dest}")
+        file_csv_to_parquet(src_file=down_dest, dest_file=down_dest+'.parquet' )
+
+        tracking_timer(p_conn, etag, "e_par",x) 
+        tracking_data(p_conn,etag,'filesize_par', os.path.getsize(down_dest+'.parquet'))   
+        x=tracking_timer(p_conn, etag, "s_upload")
+
+        print(f"Uploading to S3 {hive_bucket} - {hive_key}")
+        s3_upload("s3_conn",down_dest+'.parquet',hive_bucket,hive_key)
+
+        tracking_timer(p_conn, etag, "e_upload",x)
+
+        # remove local files
         os.remove(down_dest)
-        down_dest = down_dest2
-        print("Conversion complete. New file created:", down_dest)
-    
-    tracking_timer(p_conn, etag, "e_convert",x)
-    x=tracking_timer(p_conn, etag, "s_par")
-
-    print(f"DUCKDB convert to parquet of file {down_dest}")
-    file_csv_to_parquet(src_file=down_dest, dest_file=down_dest+'.parquet' )
-
-    tracking_timer(p_conn, etag, "e_par",x) 
-    tracking_data(p_conn,etag,'filesize_par', os.path.getsize(down_dest+'.parquet'))   
-    x=tracking_timer(p_conn, etag, "s_upload")
-
-    print(f"Uploading to S3 {hive_bucket} - {hive_key}")
-    s3_upload("s3_conn",down_dest+'.parquet',hive_bucket,hive_key)
-
-    tracking_timer(p_conn, etag, "e_upload",x)
-
-    # remove local files
-    os.remove(down_dest)
-    os.remove(down_dest+'.parquet')
-    
+        os.remove(down_dest+'.parquet')
+        
     ########################################################################
 
     if ingest_delete:

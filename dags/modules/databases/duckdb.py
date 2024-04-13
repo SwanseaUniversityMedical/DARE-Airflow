@@ -34,12 +34,13 @@ def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: s
             f"SET s3_access_key_id='{access_key_id}';" \
             f"SET s3_secret_access_key='{secret_access_key}';" \
             f"SET s3_use_ssl=False;" \
+            f"SET preserve_insertion_order=False;" \
             f"SET s3_url_style='path';" \
             f"SET memory_limit='{memory}GB'"
     logger.info(f"query={query}")
     con.execute(query)
 
-    query = f"COPY (SELECT * FROM 's3://{src_bucket}/{src_key}')" \
+    query = f"COPY (SELECT * FROM 's3://{src_bucket}/{src_key}') " \
             f"TO 's3://{dst_bucket}/{dst_key}'" \
             f"(FORMAT PARQUET, CODEC 'SNAPPY', ROW_GROUP_SIZE 100000);"
     logger.info(f"query={query}")
@@ -58,7 +59,7 @@ def file_csv_to_parquet(src_file: str, dest_file: str, memory: int = 40):
     logger.info(f"query={query}")
     con.execute(query)
 
-    query = f"COPY (SELECT * FROM '{src_file}') " \
+    query = f"COPY (SELECT * FROM read_csv_auto('{src_file}', sample_size=-1, header=false, ignore_errors=true)) " \
             f"TO '{dest_file}' " \
             f"(FORMAT PARQUET, CODEC 'SNAPPY', ROW_GROUP_SIZE 100000);"
     logger.info(f"query={query}")

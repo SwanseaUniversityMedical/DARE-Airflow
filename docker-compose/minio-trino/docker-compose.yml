@@ -120,19 +120,14 @@ services:
       /usr/bin/mc mb minio/iris;
       /usr/bin/mc policy set public minio/iris;
       /usr/bin/mc cp /data/iris.parq minio/iris/iris.parq;
-      /usr/bin/mc rm -r --force minio/data;
       /usr/bin/mc mb minio/data;
       /usr/bin/mc policy set public minio/data;
-      /usr/bin/mc rm -r --force minio/default;
       /usr/bin/mc mb minio/default;
       /usr/bin/mc policy set public minio/default;
-      /usr/bin/mc rm -r --force minio/loading;
       /usr/bin/mc mb minio/loading;
       /usr/bin/mc policy set public minio/loading;
-      /usr/bin/mc rm -r --force minio/working;
       /usr/bin/mc mb minio/working;
       /usr/bin/mc policy set public minio/working;
-      /usr/bin/mc rm -r --force minio/ingest;
       /usr/bin/mc mb minio/ingest;
       /usr/bin/mc policy set public minio/ingest;
       exit 0;
@@ -215,11 +210,11 @@ volumes:
   rabbitdata: {}
   rabbitlog: {}
   mariddbdata: {}
-  data1-1:
-  data1-2:
-  data2-1:
-  data2-2:
-  data3-1:
-  data3-2:
-  data4-1:
-  data4-2:
+  data1-1: {}
+  data1-2: {}
+  data2-1: {}
+  data2-2: {}
+  data3-1: {}
+  data3-2: {}
+  data4-1: {}
+  data4-2: {}
