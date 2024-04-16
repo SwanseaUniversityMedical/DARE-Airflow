@@ -28,6 +28,7 @@ from modules.utils.s3 import s3_download
 from modules.utils.s3 import s3_download_minio
 from modules.utils.s3 import s3_upload
 from modules.utils.minioevent import unpack_minio_event
+from modules.utils.version import compute_ledger
 from modules.databases.trino import (
     create_schema,
     drop_table,
@@ -462,10 +463,14 @@ with DAG(
         event = unpack_minio_event(message)
         logging.info(f"unpacked event={event}")
 
+        attrib = dict()
+        ledger = compute_ledger(event,attrib)
+        print(f"Computed ledger = {ledger}")
+
         ingest_csv_to_iceberg(dataset=event['dir_name'],
-                              tablename=event['filename'],
-                              version=event['version'],
-                              label="",
+                              tablename=ledger["tablename"],  # event['filename'],
+                              version=ledger["version"],  # event['version'],
+                              label=ledger["label"],
                               etag = event['etag'],
                               ingest_bucket=event['bucket'],
                               ingest_key=event['src_file_path'],
