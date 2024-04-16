@@ -460,11 +460,11 @@ with DAG(
         logging.info(f"message={message}")
 
         event = unpack_minio_event(message)
-        logging.info(f"event={event}")
+        logging.info(f"unpacked event={event}")
 
         ingest_csv_to_iceberg(dataset=event['dir_name'],
                               tablename=event['filename'],
-                              version="20",
+                              version=event['version'],
                               label="",
                               etag = event['etag'],
                               ingest_bucket=event['bucket'],
