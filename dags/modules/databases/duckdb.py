@@ -59,7 +59,9 @@ def file_csv_to_parquet(src_file: str, dest_file: str, memory: int = 40):
     logger.info(f"query={query}")
     con.execute(query)
 
-    query = f"COPY (SELECT * FROM read_csv_auto('{src_file}', sample_size=-1, header=false, ignore_errors=true)) " \
+# header=false,
+
+    query = f"COPY (SELECT * FROM read_csv_auto('{src_file}', sample_size=-1,  ignore_errors=true)) " \
             f"TO '{dest_file}' " \
             f"(FORMAT PARQUET, CODEC 'SNAPPY', ROW_GROUP_SIZE 100000);"
     logger.info(f"query={query}")

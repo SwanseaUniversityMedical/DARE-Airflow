@@ -38,8 +38,9 @@ def compute_ledger(s3, attribs):
 
 
     version_template=r'''{% if (s3.version) and s3.version %}{{ s3.version}}{% else %}{{ attrib["att_version"][0] }}{% endif %}'''
-    label_template = '{{ attrib["att_label"][0] }}'
-    table_template = '{{ attrib["label"] }}_{{ attrib["version"] }}'
+    #label_template = '{{ attrib["att_label"][0] }}'
+    label_template = '{{ s3.filename }}'
+    table_template = '{{ attrib["label"] }}'
 
     t1 = Template(version_template)
     version = t1.render(s3=s3, attrib=attrib_values)
