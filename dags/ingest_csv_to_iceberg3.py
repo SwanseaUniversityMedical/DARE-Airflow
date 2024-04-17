@@ -476,7 +476,7 @@ with DAG(
                               ingest_key=event['src_file_path'],
                               dag_id=event['etag']+str(random_with_N_digits(4)),
                               ingest_delete=False,
-                              debug=True)
+                              debug=False)
 
     consume_events = RabbitMQPythonOperator(
         func=process_event,
