@@ -120,14 +120,14 @@ def tracking_timer(p_conn, etag, variablename, tstart=time.time()):
         whichmarker = str(variablename).replace('e_','d_')
 
     with p_conn.cursor() as cur:
-        sql = f"UPDATE tracking SET {variablename}=NOW(), {whichmarker}={diff} WHERE etag = '{etag}' "
+        sql = f"UPDATE tracking SET {variablename}=NOW(), {whichmarker}={diff} WHERE id = '{etag}' "
         cur.execute(sql)
     p_conn.commit()
     return time.time()
 
 def tracking_data(p_conn, etag, variablename, data):
     with p_conn.cursor() as cur:
-            sql = f"UPDATE tracking SET {variablename}={data} WHERE etag = '{etag}' "
+            sql = f"UPDATE tracking SET {variablename}={data} WHERE id = '{etag}' "
             cur.execute(sql)
     p_conn.commit()
 
@@ -233,7 +233,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
 
     # create tracking entry
     with p_conn.cursor() as cur:
-        sql = f"INSERT INTO tracking (etag, dataset, version, label, s_marker, bucket, path) SELECT '{etag}','{dataset}','{version}','{label}', NOW(), '{ingest_bucket}', '{ingest_key}' WHERE NOT EXISTS (SELECT 1 FROM tracking WHERE etag = '{etag}' )"
+        sql = f"INSERT INTO tracking (id, dataset, version, label, s_marker, bucket, path) SELECT '{etag}','{dataset}','{version}','{label}', NOW(), '{ingest_bucket}', '{ingest_key}' WHERE NOT EXISTS (SELECT 1 FROM tracking WHERE id = '{etag}' )"
         cur.execute(sql)
     p_conn.commit()
     x2 = time.time()
@@ -435,6 +435,15 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
                 key=hive_key
             )
 
+    with p_conn.cursor() as cur:
+        sql = f"INSERT INTO trackingtable (id, dataset,version,label,dated,bucket,key) SELECT '{etag}','{dataset}','{version}','{label}', NOW(), '{ingest_bucket}', '{ingest_key}' WHERE NOT EXISTS (SELECT 1 FROM trackingtable WHERE id = '{etag}' )"    
+        print(sql)
+        cur.execute(sql)
+        sql = f"UPDATE trackingtable set tablename = '{iceberg_table}', physical = '{iceberg_path}' where id = '{etag}'"
+        print(sql)
+        cur.execute(sql)
+    p_conn.commit() 
+
     ########################################################################
     # close postgres connection
     tracking_timer(p_conn, etag, "e_marker",x2)
@@ -476,7 +485,7 @@ with DAG(
                               ingest_key=event['src_file_path'],
                               dag_id=event['etag']+str(random_with_N_digits(4)),
                               ingest_delete=False,
-                              debug=False)
+                              debug=True)
 
     consume_events = RabbitMQPythonOperator(
         func=process_event,
@@ -494,7 +503,7 @@ with DAG(
         postgres_conn_id='pg_conn',  #drop table if exists tracking ;
         sql='''                
 CREATE TABLE IF NOT EXISTS tracking (
-            etag VARCHAR(50), 
+            id VARCHAR(50), 
 bucket VARCHAR(50),
 path VARCHAR(500),
 s_marker timestamp,
@@ -531,6 +540,26 @@ d_iceberg INT
         ''',
         dag=dag,
     )
+
+    create_tracking_table_table_task = PostgresOperator(
+        task_id='create_tracking_table_table',
+        postgres_conn_id='pg_conn',  #drop table if exists tracking ;
+        sql='''                
+CREATE TABLE IF NOT EXISTS trackingtable (
+            id VARCHAR(50), 
+            dataset VARCHAR(50), 
+            version VARCHAR(50), 
+            label VARCHAR(50), 
+            dated timestamp,
+            bucket VARCHAR(50),
+            key VARCHAR(150), 
+            tablename VARCHAR(150), 
+            physical VARCHAR(200)
+        );
+        ''',
+        dag=dag,
+    )
+    
     # If the consumer task fails and isn't restarted, restart the whole DAG
     restart_dag = TriggerDagRunOperator(
         task_id="restart_dag",
@@ -538,4 +567,4 @@ d_iceberg INT
         trigger_rule=TriggerRule.ALL_DONE
     )
 
-    create_tracking_table_task >> consume_events >> restart_dag
+    create_tracking_table_task >> create_tracking_table_table_task >> consume_events >> restart_dag
