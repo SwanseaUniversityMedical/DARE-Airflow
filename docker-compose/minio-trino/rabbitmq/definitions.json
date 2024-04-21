@@ -68,6 +68,33 @@
          "arguments":{
             
          }
+      },
+      {
+         "name":"audit_raw",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
+         "name":"audit_trino",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
+         "name":"audit_iceberg",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
       }
     ],
     "exchanges":[
@@ -81,7 +108,18 @@
           "arguments":{
              
           }
-       }
+       },
+       {
+         "name":"notify",
+         "vhost":"/",
+         "type":"fanout",
+         "durable":true,
+         "auto_delete":false,
+         "internal":false,
+         "arguments":{
+            
+         }
+      }
     ],
     "bindings":[
        {
@@ -110,6 +148,36 @@
          "destination":"airflow",
          "destination_type":"queue",
          "routing_key":"",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"notify",
+         "vhost":"/",
+         "destination":"audit_raw",
+         "destination_type":"queue",
+         "routing_key":"s3",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"notify",
+         "vhost":"/",
+         "destination":"audit_trino",
+         "destination_type":"queue",
+         "routing_key":"hive",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"notify",
+         "vhost":"/",
+         "destination":"audit_iceberg",
+         "destination_type":"queue",
+         "routing_key":"iceberg",
          "arguments":{
             
          }

@@ -11,6 +11,7 @@ import s3fs
 import codecs
 import chardet
 import psycopg2
+from datetime import datetime
 from random import randint
 from airflow import DAG
 from airflow.operators.python import get_current_context
@@ -18,6 +19,8 @@ from airflow.operators.postgres_operator import PostgresOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.hooks.base import BaseHook
+
+import constants
 
 from modules.providers.operators.rabbitmq import RabbitMQPythonOperator
 from modules.databases.duckdb import s3_csv_to_parquet
@@ -29,6 +32,7 @@ from modules.utils.s3 import s3_download_minio
 from modules.utils.s3 import s3_upload
 from modules.utils.minioevent import unpack_minio_event
 from modules.utils.version import compute_ledger
+from modules.utils.rabbit import send_message_to_rabbitmq
 from modules.databases.trino import (
     create_schema,
     drop_table,
@@ -152,6 +156,8 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
 
     # version will be folder between datasetname and file/object
 
+    current_date = datetime.now()
+    formatted_date = current_date.strftime("%Y%m%d")
     ########################################################################
 
     logging.info("Starting function ingest_csv_to_iceberg...")
@@ -356,6 +362,10 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         os.remove(down_dest)
         os.remove(down_dest+'.parquet')
         
+        send_message_to_rabbitmq('rabbitmq_conn',constants.rabbitmq_exchange_notify, constants.rabbitmq_exchange_notify_key_s3file,
+                                 {"dataset":dataset,"version":version,"label":label,"dated":formatted_date,
+                                  "s3bucket": hive_bucket, "s3key":hive_key})
+        
     ########################################################################
 
     if ingest_delete:
@@ -408,6 +418,11 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         )
 
         tracking_timer(p_conn, etag, "e_schema",x)
+
+        send_message_to_rabbitmq('rabbitmq_conn',constants.rabbitmq_exchange_notify, constants.rabbitmq_exchange_notify_key_trino,
+                                 {"dataset":dataset,"version":version,"label":label,"dated":formatted_date,
+                                  "s3location":hive_path, "dbtable": hive_table, "schema":schema})
+        
         x=tracking_timer(p_conn, etag, "s_iceberg")
 
         logging.info("Create table in Iceberg connector...")
@@ -420,6 +435,10 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
 
         tracking_timer(p_conn, etag, "e_iceberg",x)
 
+        send_message_to_rabbitmq('rabbitmq_conn',constants.rabbitmq_exchange_notify, constants.rabbitmq_exchange_notify_key_trino_iceberg,
+                                 {"dataset":dataset,"version":version,"label":label,"dated":formatted_date,
+                                  "s3location":iceberg_path, "dbtable": iceberg_table})
+    
     finally:
         if debug:
             logging.info("Debug mode, not cleaning up table in Hive connector...")
@@ -491,7 +510,7 @@ with DAG(
         func=process_event,
         task_id="consume_events",
         rabbitmq_conn_id="rabbitmq_conn",
-        queue_name="afload",
+        queue_name=constants.rabbitmq_queue_minio_event,
         deferrable=datetime.timedelta(seconds=120),
         poke_interval=datetime.timedelta(seconds=1),
         retry_delay=datetime.timedelta(seconds=10),
