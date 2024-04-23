@@ -3,6 +3,7 @@ import hashlib
 import os
 import os.path
 import logging
+import requests
 import time
 import pendulum
 import pyarrow.parquet as pq
@@ -30,7 +31,7 @@ from modules.utils.s3 import s3_download
 from modules.utils.s3 import s3_download_minio
 from modules.utils.s3 import s3_upload
 from modules.utils.minioevent import unpack_minio_event
-from modules.utils.version import compute_ledger
+from modules.utils.version import attribute_search, compute_params
 from modules.utils.rabbit import send_message_to_rabbitmq
 from modules.databases.trino import (
     create_schema,
@@ -70,6 +71,65 @@ def convert_to_utf8(input_path, output_path):
                 except UnicodeDecodeError:
                     decoded_line = line.decode('iso-8859-1')
                 output_file.write(decoded_line)
+
+def get_instructions(datasetname):
+    
+    # need to compute this
+    url = 'https://cat-hdp.demo.ukserp.ac.uk/doc/getdatajson/dlm/4a15e9fe-4214-4fb8-a9cd-f4833ca14c74'  # needs to be worked out, this is PEDW for now
+
+    # templates and default values if not changed
+    templates = dict(
+        version_template=r'''{% if (s3.version) and s3.version %}{{ s3.version}}{% else %}{{ attrib["att_version"][0] }}{% endif %}''',
+        label_template = '{{ s3.filename }}',
+        table_template = '{{ attrib["label"] }}',
+        dataset_template = '{{ s3.dir_name }}'
+    )
+
+    attribs = dict()
+
+    try:
+        # Fetch JSON data from the URL and parse it into a Python variable
+        response = requests.get(url)
+        
+        # Check if the response status code is OK (200)
+        if response.status_code == 200:
+            data = response.json()
+
+            process = data.get("process")
+
+            if data.get("tableName"):
+                templates['table_template']=data.get("tableName")
+            if data.get("version"):
+                templates['version_template']=data.get("version")
+            if data.get("label"):
+                templates['label_template']=data.get("label")
+            
+            ignore_errors = data.get("IgnoreErrors")   
+            header = data.get("header")         
+            sampling = data.get("sampling")
+
+            print("IgnoreErrors:", ignore_errors)
+            print("header:",header)
+            print("sampling:",sampling)
+
+            attributes = data.get("attributes")
+            if attributes:
+                for attribute in attributes:                    
+                    attribute_name = attribute.get("attributeName")
+                    attribute_source = attribute.get("source")
+                    attribute_regex = attribute.get("regex")
+                    attribute_single = attribute.get("single")
+                    attribs[attribute_name]= attribute_search(attribute_source,attribute_regex,attribute_single)
+            else:
+                print("No attributes found.")
+        else:
+            print("Failed to fetch JSON data. Status code:", response.status_code)
+
+    except requests.exceptions.RequestException as e:
+        print("Error fetching JSON data:", e)
+
+    return attribs, templates, process
+
 
 def pyarrow_to_trino_schema(schema):
     trino_schema = []
@@ -419,7 +479,8 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
 
         send_message_to_rabbitmq('rabbitmq_conn',constants.rabbitmq_exchange_notify, constants.rabbitmq_exchange_notify_key_trino,
                                  {"dataset":dataset,"version":version,"label":label,"dated":formatted_date,
-                                  "s3location":hive_path, "dbtable": hive_table, "schema":schema})
+                                  "s3location":hive_path, "dbtable": hive_table})
+        # "schema":schema  can not be json serialised, so need to sort that ???
         
         x=tracking_timer(p_conn, etag, "s_iceberg")
 
@@ -486,17 +547,24 @@ with DAG(
         logging.info("Processing message!")
         logging.info(f"message={message}")
 
+        # Process minio message into structure
         event = unpack_minio_event(message)
         logging.info(f"unpacked event={event}")
 
-        attrib = dict()
-        ledger = compute_ledger(event,attrib)
-        print(f"Computed ledger = {ledger}")
+        # Based on the datasetname go and get an defined rules
+        attribs, templates, process = get_instructions(event['dir_name'])
+        logging.info(f'attributes = {attribs}')
+        logging.info(f'templates = {templates}')
+        logging.info(f'process = {process}')
 
-        ingest_csv_to_iceberg(dataset=event['dir_name'],
-                              tablename=ledger["tablename"],  # event['filename'],
-                              version=ledger["version"],  # event['version'],
-                              label=ledger["label"],
+        # Compute paarmeters based on data and any templates defined
+        params = compute_params(event,attribs,templates)
+        logging.info(f"Computed Params = {params}")
+
+        ingest_csv_to_iceberg(dataset=params['dataset'],  
+                              tablename=params["tablename"],  
+                              version=params["version"],  
+                              label=params["label"],
                               etag = event['etag'],
                               ingest_bucket=event['bucket'],
                               ingest_key=event['src_file_path'],
@@ -518,62 +586,14 @@ with DAG(
     create_tracking_table_task = PostgresOperator(
         task_id='create_tracking_table',
         postgres_conn_id='pg_conn',  #drop table if exists tracking ;
-        sql='''                
-CREATE TABLE IF NOT EXISTS tracking (
-            id VARCHAR(50), 
-bucket VARCHAR(50),
-path VARCHAR(500),
-s_marker timestamp,
-e_marker timestamp,
-d_marker INT,
-dataset VARCHAR(100),
-version VARCHAR(50),
-label VARCHAR(50),
-filesize BIGINT,
-filesize_par BIGINT,
-columns INT,
-s_download timestamp,
-e_download timestamp,
-d_download INT,
-s_convert timestamp,
-e_convert timestamp,
-d_convert INT,
-s_par timestamp,
-e_par timestamp,
-d_par INT,
-s_upload timestamp,
-e_upload timestamp,
-d_upload INT,
-s_schema timestamp,
-e_schema timestamp,
-d_schema INT,
-s_hive timestamp,
-e_hive timestamp,
-d_hive INT,
-s_iceberg timestamp,
-e_iceberg timestamp,
-d_iceberg INT
-        );
-        ''',
+        sql=constants.sql_tracking,
         dag=dag,
     )
 
     create_tracking_table_table_task = PostgresOperator(
         task_id='create_tracking_table_table',
         postgres_conn_id='pg_conn',  #drop table if exists tracking ;
-        sql='''                
-CREATE TABLE IF NOT EXISTS trackingtable (
-            id VARCHAR(50), 
-            dataset VARCHAR(50), 
-            version VARCHAR(50), 
-            label VARCHAR(50), 
-            dated timestamp,
-            bucket VARCHAR(50),
-            key VARCHAR(150), 
-            tablename VARCHAR(150), 
-            physical VARCHAR(200)
-        );
-        ''',
+        sql=constants.sql_trackingtable,
         dag=dag,
     )
     

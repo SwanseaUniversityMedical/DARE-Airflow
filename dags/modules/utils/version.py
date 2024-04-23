@@ -1,25 +1,25 @@
+from datetime import datetime
 import re
 from jinja2 import Template
 
 class attribute_search:
-  def __init__(self, source, regex):
+  def __init__(self, source, regex, single):
     self.source = source
     self.regex = regex
+    self.single = single
 
   def get_structure(self):
         return {
             "source": self.source,
-            "regex": self.regex
+            "regex": self.regex,
+            "single": self.single
         }
   
-def compute_ledger(s3, attribs):
+def compute_params(s3, attribs, templates):
     
     #add system attributes
-
-    # add attribute that would come from form.io
-    attribs["att_version"]= attribute_search("{{s3.filename}}", r'''(?<=ODV)\d''')
-    attribs["att_label"]= attribute_search("{{s3.filename}}", r'''\w+(?=_ODV)''')
-    print(f"Compute Ledger Attribs = {attribs}")
+    formatted_date = datetime.today().strftime("%Y%m%d")
+    print(f"Compute Params Attribs = {attribs}")
 
     # compute value of add attributes and add
     
@@ -37,23 +37,23 @@ def compute_ledger(s3, attribs):
     print(f"Compute Ledger Attribute Values : {attrib_values}")
 
 
-    version_template=r'''{% if (s3.version) and s3.version %}{{ s3.version}}{% else %}{{ attrib["att_version"][0] }}{% endif %}'''
-    #label_template = '{{ attrib["att_label"][0] }}'
-    label_template = '{{ s3.filename }}'
-    table_template = '{{ attrib["label"] }}'
+    t0 = Template(templates['dataset_template'])
+    datasetname = t0.render(s3=s3, attrib=attrib_values, date=formatted_date)
+    attrib_values["dataset"]=datasetname
 
-    t1 = Template(version_template)
-    version = t1.render(s3=s3, attrib=attrib_values)
+    t1 = Template(templates['version_template'])
+    version = t1.render(s3=s3, attrib=attrib_values, date=formatted_date)
     attrib_values["version"]=version
 
-    t2 = Template(label_template)
-    label = t2.render(s3=s3, attrib=attrib_values)
+    t2 = Template(templates['label_template'])
+    label = t2.render(s3=s3, attrib=attrib_values, date=formatted_date)
     attrib_values["label"]=label
     
-    t3 = Template(table_template)
-    tablename = t3.render(s3=s3, attrib=attrib_values)
+    t3 = Template(templates['table_template'])
+    tablename = t3.render(s3=s3, attrib=attrib_values, date=formatted_date)
 
     return dict (
+        dataset=datasetname,
         version=version,
         tablename = tablename,
         label = label
