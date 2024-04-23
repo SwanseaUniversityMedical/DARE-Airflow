@@ -59,7 +59,7 @@ with DAG(
         func=process_event,
         task_id="consume_events",
         rabbitmq_conn_id="rabbitmq_conn",
-        queue_name=constants.rabbitmq_queue_minio_register
+        queue_name=constants.rabbitmq_queue_minio_register,
         deferrable=datetime.timedelta(seconds=120),
         poke_interval=datetime.timedelta(seconds=1),
         retry_delay=datetime.timedelta(seconds=10),

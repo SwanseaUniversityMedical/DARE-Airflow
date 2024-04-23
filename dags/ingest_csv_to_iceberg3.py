@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta
 import hashlib
 import os
 import os.path
@@ -11,7 +11,6 @@ import s3fs
 import codecs
 import chardet
 import psycopg2
-from datetime import datetime
 from random import randint
 from airflow import DAG
 from airflow.operators.python import get_current_context
@@ -156,8 +155,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
 
     # version will be folder between datasetname and file/object
 
-    current_date = datetime.now()
-    formatted_date = current_date.strftime("%Y%m%d")
+    formatted_date = datetime.today().strftime("%Y%m%d")
     ########################################################################
 
     logging.info("Starting function ingest_csv_to_iceberg...")
@@ -511,9 +509,9 @@ with DAG(
         task_id="consume_events",
         rabbitmq_conn_id="rabbitmq_conn",
         queue_name=constants.rabbitmq_queue_minio_event,
-        deferrable=datetime.timedelta(seconds=120),
-        poke_interval=datetime.timedelta(seconds=1),
-        retry_delay=datetime.timedelta(seconds=10),
+        deferrable=timedelta(seconds=120),
+        poke_interval=timedelta(seconds=1),
+        retry_delay=timedelta(seconds=10),
         retries=999999999,
     )
 
