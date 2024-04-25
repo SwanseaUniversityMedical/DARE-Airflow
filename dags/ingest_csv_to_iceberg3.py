@@ -86,6 +86,7 @@ def get_instructions(datasetname):
     )
 
     attribs = dict()
+    duckdb_params = 'sample_size=-1,  ignore_errors=true'
 
     try:
         # Fetch JSON data from the URL and parse it into a Python variable
@@ -102,11 +103,26 @@ def get_instructions(datasetname):
             if data.get("version"):
                 templates['version_template']=data.get("version")
             if data.get("label"):
-                templates['label_template']=data.get("label")
-            
+                templates['label_template']=data.get("label")            
+            if data.get("dataset_template"):
+                templates['dataset_template']=data.get("dataset_template") 
+                       
             ignore_errors = data.get("IgnoreErrors")   
-            header = data.get("header")         
+            if ignore_errors == 'default':
+                duckdb_params=""
+            elif ignore_errors == 'False':
+                duckdb_params="ignore_errors=false,"
+            else:
+                duckdb_params="ignore_errors=true,"
+
+            header = data.get("header") 
+            if header == 'True':
+                duckdb_params = duckdb_params + ' header=true,'
+            elif header == 'False':
+                duckdb_params = duckdb_params + ' header=false,'
+            
             sampling = data.get("sampling")
+            duckdb_params = duckdb_params + 'sample_size=' + str(sampling)
 
             print("IgnoreErrors:", ignore_errors)
             print("header:",header)
@@ -128,7 +144,7 @@ def get_instructions(datasetname):
     except requests.exceptions.RequestException as e:
         print("Error fetching JSON data:", e)
 
-    return attribs, templates, process
+    return attribs, templates, duckdb_params, process
 
 
 def pyarrow_to_trino_schema(schema):
@@ -195,7 +211,7 @@ def tracking_data(p_conn, etag, variablename, data):
     p_conn.commit()
 
 
-def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucket, ingest_key, dag_id, ingest_delete, debug):
+def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucket, ingest_key, dag_id, ingest_delete, duckdb_params, debug):
 
     ########################################################################
     # Key settings
@@ -391,6 +407,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         with open(down_dest, 'rb') as file:
             testdata = file.read(5000)
             #if is_utf8(testdata):
+            # removed for now as does not work - so always run - this needs to be sorted as waste of energy
             if False:
                 print("File is already UTF-8 encoded. No conversion needed.")
             else:
@@ -405,7 +422,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         x=tracking_timer(p_conn, etag, "s_par")
 
         print(f"DUCKDB convert to parquet of file {down_dest}")
-        file_csv_to_parquet(src_file=down_dest, dest_file=down_dest+'.parquet' )
+        file_csv_to_parquet(src_file=down_dest, dest_file=down_dest+'.parquet', duckdb_params=duckdb_params )
 
         tracking_timer(p_conn, etag, "e_par",x) 
         tracking_data(p_conn,etag,'filesize_par', os.path.getsize(down_dest+'.parquet'))   
@@ -552,10 +569,11 @@ with DAG(
         logging.info(f"unpacked event={event}")
 
         # Based on the datasetname go and get an defined rules
-        attribs, templates, process = get_instructions(event['dir_name'])
+        attribs, templates, duckdb_params, process = get_instructions(event['dir_name'])
         logging.info(f'attributes = {attribs}')
         logging.info(f'templates = {templates}')
         logging.info(f'process = {process}')
+        logging.info(f'duckdb param = {duckdb_params}')
 
         # Compute paarmeters based on data and any templates defined
         params = compute_params(event,attribs,templates)
@@ -570,6 +588,7 @@ with DAG(
                               ingest_key=event['src_file_path'],
                               dag_id=event['etag']+str(random_with_N_digits(4)),
                               ingest_delete=False,
+                              duckdb_params=duckdb_params,
                               debug=True)
 
     consume_events = RabbitMQPythonOperator(

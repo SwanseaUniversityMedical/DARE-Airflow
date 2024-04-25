@@ -47,7 +47,7 @@ def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: s
     con.execute(query)
 
 
-def file_csv_to_parquet(src_file: str, dest_file: str, memory: int = 40):
+def file_csv_to_parquet(src_file: str, dest_file: str, duckdb_params: str, memory: int = 40):
     
     con = duckdb.connect(database=':memory:')
 
@@ -61,7 +61,7 @@ def file_csv_to_parquet(src_file: str, dest_file: str, memory: int = 40):
 
 # header=false,
 
-    query = f"COPY (SELECT * FROM read_csv_auto('{src_file}', sample_size=-1,  ignore_errors=true)) " \
+    query = f"COPY (SELECT * FROM read_csv_auto('{src_file}', {duckdb_params})) " \
             f"TO '{dest_file}' " \
             f"(FORMAT PARQUET, CODEC 'SNAPPY', ROW_GROUP_SIZE 100000);"
     logger.info(f"query={query}")

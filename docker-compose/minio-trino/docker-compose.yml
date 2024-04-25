@@ -34,7 +34,8 @@ x-minio-common: &minio-common
   networks:
       - miniotrino
   depends_on:      
-      - rabbitmq
+      rabbitmq:
+          condition: service_healthy
   environment:
     - MINIO_ROOT_USER= minio
     - MINIO_ROOT_PASSWORD= minioadmin
@@ -78,7 +79,7 @@ services:
 
   minio3:
     <<: *minio-common
-    hostname: minio3
+    hostname: minio3  
     volumes:
       - data3-1:/data1
       - data3-2:/data2
@@ -99,18 +100,31 @@ services:
       - "9000:9000"
       - "9001:9001"
     networks:
-      - miniotrino      
+      - miniotrino   
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://minio:9000"]
+      interval: 1m
+      timeout: 10s
+      retries: 3  
     depends_on:
-      - minio1
-      - minio2
-      - minio3
-      - minio4
-      - rabbitmq
+      minio1:
+          condition: service_healthy 
+      minio2:
+          condition: service_healthy 
+      minio3:
+          condition: service_healthy 
+      minio4:
+          condition: service_healthy 
+      rabbitmq:
+          condition: service_healthy 
 
   # To Create Minio bucket and upload iris parquet file.
   mc:
     depends_on:
-      - nginx
+      nginx:
+          condition: service_started
+      rabbitmq:
+          condition: service_healthy
     image: minio/mc
     container_name: mc
     entrypoint: >
@@ -154,6 +168,10 @@ services:
     networks:
         - miniotrino
     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://rabbitmq:15672"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 15
       test: rabbitmq-diagnostics -q ping
       interval: 30s
       timeout: 30s
@@ -163,8 +181,10 @@ services:
     image: 'trinodb/trino:438'
     hostname: trino-coordinator
     depends_on:
-      - nginx
-      - hive-metastore
+      nginx:
+          condition: service_started
+      hive-metastore:
+          condition: service_started
     ports:
       - '8090:8080'
     volumes:
