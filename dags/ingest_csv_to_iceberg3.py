@@ -79,7 +79,7 @@ def get_instructions(datasetname):
     # need to compute this
     url =  constants.assets3_url + datasetname
     logging.info(f'Getting loadign instructions from {url}')
-    
+
     # templates and default values if not changed
     templates = dict(
         version_template=r'''{% if (s3.version) and s3.version %}{{ s3.version}}{% else %}{{ attrib["att_version"][0] }}{% endif %}''',
@@ -90,6 +90,7 @@ def get_instructions(datasetname):
 
     attribs = dict()
     duckdb_params = 'sample_size=-1,  ignore_errors=true'
+    process = "yesAlways"
 
     try:
         # Fetch JSON data from the URL and parse it into a Python variable
@@ -578,21 +579,25 @@ with DAG(
         logging.info(f'process = {process}')
         logging.info(f'duckdb param = {duckdb_params}')
 
-        # Compute paarmeters based on data and any templates defined
-        params = compute_params(event,attribs,templates)
-        logging.info(f"Computed Params = {params}")
+        if process == "yesAlways":
+                
+            # Compute paarmeters based on data and any templates defined
+            params = compute_params(event,attribs,templates)
+            logging.info(f"Computed Params = {params}")
 
-        ingest_csv_to_iceberg(dataset=params['dataset'],  
-                              tablename=params["tablename"],  
-                              version=params["version"],  
-                              label=params["label"],
-                              etag = event['etag'],
-                              ingest_bucket=event['bucket'],
-                              ingest_key=event['src_file_path'],
-                              dag_id=event['etag']+str(random_with_N_digits(4)),
-                              ingest_delete=False,
-                              duckdb_params=duckdb_params,
-                              debug=True)
+            ingest_csv_to_iceberg(dataset=params['dataset'],  
+                                tablename=params["tablename"],  
+                                version=params["version"],  
+                                label=params["label"],
+                                etag = event['etag'],
+                                ingest_bucket=event['bucket'],
+                                ingest_key=event['src_file_path'],
+                                dag_id=event['etag']+str(random_with_N_digits(4)),
+                                ingest_delete=False,
+                                duckdb_params=duckdb_params,
+                                debug=True)
+        else:
+            logging.info("Instructions to abort processing")
 
     consume_events = RabbitMQPythonOperator(
         func=process_event,
