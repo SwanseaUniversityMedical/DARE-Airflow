@@ -72,11 +72,14 @@ def convert_to_utf8(input_path, output_path):
                     decoded_line = line.decode('iso-8859-1')
                 output_file.write(decoded_line)
 
+
+# GET instructions for Assetsv3 on how to handle this dataset
 def get_instructions(datasetname):
     
     # need to compute this
-    url = 'https://cat-hdp.demo.ukserp.ac.uk/doc/getdatajson/dlm/4a15e9fe-4214-4fb8-a9cd-f4833ca14c74'  # needs to be worked out, this is PEDW for now
-
+    url =  constants.assets3_url + datasetname
+    logging.info(f'Getting loadign instructions from {url}')
+    
     # templates and default values if not changed
     templates = dict(
         version_template=r'''{% if (s3.version) and s3.version %}{{ s3.version}}{% else %}{{ attrib["att_version"][0] }}{% endif %}''',

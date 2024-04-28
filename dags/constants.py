@@ -5,6 +5,8 @@ rabbitmq_exchange_notify_key_s3file='s3'
 rabbitmq_exchange_notify_key_trino='hive'
 rabbitmq_exchange_notify_key_trino_iceberg='iceberg'
 
+assets3_url = 'https://cat-hdp.demo.ukserp.ac.uk/doc/GetFilteredData2?profile=dlm&Filter=%22Dataset='
+
 sql_trackingtable='''                
 CREATE TABLE IF NOT EXISTS trackingtable (
             id VARCHAR(50), 

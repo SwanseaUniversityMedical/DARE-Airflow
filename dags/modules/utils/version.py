@@ -30,7 +30,10 @@ def compute_params(s3, attribs, templates):
             template = Template(structure["source"])
             searchstring = template.render(s3=s3, attrib=attrib_values)
             if structure["regex"]:
-                attrib_values[key] = re.findall(structure["regex"],searchstring)
+                if structure["single"] == 'true':
+                    attrib_values[key] = re.search(structure["regex"],searchstring)
+                else:
+                    attrib_values[key] = re.findall(structure["regex"],searchstring)
             else:
                 attrib_values[key] = searchstring  # allow literals
 
