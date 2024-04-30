@@ -26,6 +26,8 @@ def decode_minio_event(bucket, key, etag):
     if len(paths) > 2:
         version = paths[-2]
 
+    version = version.replace("-","_").replace("/","_")
+
     return dict(
         bucket=bucket,
         src_file_path=src_file_path,

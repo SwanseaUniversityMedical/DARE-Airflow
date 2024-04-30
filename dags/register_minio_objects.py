@@ -71,7 +71,7 @@ with DAG(
         postgres_conn_id='pg_conn',
         sql='''
         CREATE TABLE IF NOT EXISTS register (
-            etag VARCHAR(50)
+            etag VARCHAR(100)
         );
         ''',
         dag=dag,

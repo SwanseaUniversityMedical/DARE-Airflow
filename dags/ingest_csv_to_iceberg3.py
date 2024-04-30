@@ -99,7 +99,8 @@ def get_instructions(datasetname):
             'https': 'http://192.168.10.15:8080'
         }
         # Fetch JSON data from the URL and parse it into a Python variable
-        response = requests.get(url, proxies=proxy)
+        #response = requests.get(url, proxies=proxy)
+        response = requests.get(url)
         
         # Check if the response status code is OK (200)
         if response.status_code == 200:
@@ -361,11 +362,13 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
     iceberg_schema = f"iceberg.{dataset}"  # "iceberg.ingest"
 
     tablename_ext = ""
-    if version:
-        tablename_ext = tablename_ext + f"_{version}"
+    #if version:
+    #    tablename_ext = tablename_ext + f"_{version}"
     if append_GUID:
         tablename_ext = tablename_ext + f"_{dag_id}"
-    iceberg_table = validate_identifier(f"{iceberg_schema}.{tablename}{tablename_ext}")
+    tempTabName = f"{iceberg_schema}.{tablename}{tablename_ext}".replace("-","_")
+    logging.info(f"proposed iceberg name = {tempTabName}")
+    iceberg_table = validate_identifier(tempTabName)
 
     iceberg_bucket = base_layer_bucket
     iceberg_dir = validate_s3_key(f"{dataset}/{version}")
