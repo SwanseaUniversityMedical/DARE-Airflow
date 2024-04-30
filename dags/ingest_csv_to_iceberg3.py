@@ -30,7 +30,7 @@ from modules.utils.s3 import s3_create_bucket
 from modules.utils.s3 import s3_download
 from modules.utils.s3 import s3_download_minio
 from modules.utils.s3 import s3_upload
-from modules.utils.minioevent import unpack_minio_event
+from modules.utils.minioevent import unpack_minio_event, decode_minio_event
 from modules.utils.version import attribute_search, compute_params
 from modules.utils.rabbit import send_message_to_rabbitmq
 from modules.databases.trino import (
@@ -519,6 +519,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         logging.info("Create table in Iceberg connector...")
         iceberg_create_table_from_hive(
             trino,
+            schema=iceberg_schema,
             table=iceberg_table,
             hive_table=hive_table,
             location=iceberg_path
@@ -579,8 +580,10 @@ with DAG(
         logging.info("Processing message!")
         logging.info(f"message={message}")
 
-        # Process minio message into structure
-        event = unpack_minio_event(message)
+        # Process minio message into structure (two methods separated so the first one can be reused)
+        bucket, key, etag = unpack_minio_event(message)
+        logging.info(f'unpacked basic = bucket: {bucket}, key: {key}, etag: {etag}')
+        event = decode_minio_event(bucket, key, etag)
         logging.info(f"unpacked event={event}")
 
         # Based on the datasetname go and get an defined rules

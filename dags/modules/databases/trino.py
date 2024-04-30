@@ -122,17 +122,23 @@ def hive_create_table_from_parquet(trino: sqlalchemy.engine.Engine, table: str, 
     trino.execute(query)
 
 
-def iceberg_create_table_from_hive(trino: sqlalchemy.engine.Engine, table: str, hive_table: str, location: str):
+def iceberg_create_table_from_hive(trino: sqlalchemy.engine.Engine, schema : str,  table: str, hive_table: str, location: str):
 
     query = f"CREATE TABLE " \
             f"{validate_identifier(table)} " \
-            f"WITH (" \
+            f" IF NOT EXISTS WITH (" \
             f"location='s3a://{validate_s3_key(location)}/', " \
             f"format='PARQUET'" \
             f") " \
             f"AS SELECT * FROM {validate_identifier(hive_table)}"
     trino.execute(query)
 
+    justTableName = table.replace(schema+'.','')
+    logging.info(f'Create table - table name = {justTableName}')
+
+    tableexists_querry = f"show tables from {schema} like '{justTableName}'"
+    x = trino.execute(tableexists_querry)
+    print(f'CREATE Table - does table exist = {x}')
 
 def drop_table(trino: sqlalchemy.engine.Engine, table: str):
     query = f"DROP TABLE " \
