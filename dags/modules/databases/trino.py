@@ -122,28 +122,39 @@ def hive_create_table_from_parquet(trino: sqlalchemy.engine.Engine, table: str, 
     trino.execute(query)
 
 
-def iceberg_create_table_from_hive(trino: sqlalchemy.engine.Engine, schema : str,  table: str, hive_table: str, location: str):
+def iceberg_create_table_from_hive(trino: sqlalchemy.engine.Engine, schema : str,  table: str, hive_table: str, location: str, action: str):
 
-    query = f"CREATE TABLE IF NOT EXISTS " \
-            f"{validate_identifier(table)} " \
-            f" WITH (" \
-            f"location='s3a://{validate_s3_key(location)}/', " \
-            f"format='PARQUET'" \
-            f") " \
-            f"AS SELECT * FROM {validate_identifier(hive_table)}"
-    trino.execute(query)
+    create = True
 
-    justTableName = table.replace(schema+'.','')
-    logging.info(f'Create table - table name = {justTableName}')
+    if action == "replace":
+        logging.info(f"Droping table {validate_identifier(table)} if exists")
+        drop_querry = f"DROP TABLE IF EXISTS {validate_identifier(table)}"
+        trino.execute(drop_querry)
 
-    tableexists_querry = f"show tables from {schema} like '{justTableName}'"
-    table_exists = trino.execute(tableexists_querry)
-    whichTables = table_exists.fetchall()
-     
-    if len(whichTables) == 0 :
-        print("** table not exists")
-    else:
-        print("** table exists")
+    if action == "append":
+        # does table already exist
+        justTableName = table.replace(schema+'.','')
+        tableexists_querry = f"show tables from {schema} like '{justTableName}'"
+        table_exists = trino.execute(tableexists_querry)
+        whichTables = table_exists.fetchall()
+        if len(whichTables) > 0:
+            # yes table exists, if does not then just let the process below create it
+            logging.info(f"Appending to {validate_identifier(table)}")
+            create = False
+            append_querry = f"INSERT INTO {validate_identifier(table)} SELECT * FROM {validate_identifier(hive_table)}"
+            trino.execute(append_querry)
+
+
+    if create:
+        logging.info(f"Creating table {validate_identifier(table)}, so long as it does not already exist")
+        query = f"CREATE TABLE IF NOT EXISTS " \
+                f"{validate_identifier(table)} " \
+                f" WITH (" \
+                f"location='s3a://{validate_s3_key(location)}/', " \
+                f"format='PARQUET'" \
+                f") " \
+                f"AS SELECT * FROM {validate_identifier(hive_table)}"
+        trino.execute(query)
 
 
 def drop_table(trino: sqlalchemy.engine.Engine, table: str):

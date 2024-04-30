@@ -228,7 +228,7 @@ def tracking_data(p_conn, etag, variablename, data):
     p_conn.commit()
 
 
-def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucket, ingest_key, dag_id, ingest_delete, duckdb_params, debug):
+def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucket, ingest_key, dag_id, ingest_delete, duckdb_params, action, debug):
 
     ########################################################################
     # Key settings
@@ -524,7 +524,8 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
             schema=iceberg_schema,
             table=iceberg_table,
             hive_table=hive_table,
-            location=iceberg_path
+            location=iceberg_path,
+            action
         )
 
         tracking_timer(p_conn, etag, "e_iceberg",x)
@@ -612,6 +613,7 @@ with DAG(
                                 dag_id=event['etag']+str(random_with_N_digits(4)),
                                 ingest_delete=False,
                                 duckdb_params=duckdb_params,
+                                action=action,
                                 debug=True)
         else:
             logging.info("Instructions to abort processing")
