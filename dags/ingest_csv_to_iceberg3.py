@@ -91,6 +91,7 @@ def get_instructions(datasetname):
     attribs = dict()
     duckdb_params = 'sample_size=-1,  ignore_errors=true'
     process = "yesAlways"
+    action = "default"
 
     try:
         # Fetch JSON data from the URL and parse it into a Python variable
@@ -134,6 +135,7 @@ def get_instructions(datasetname):
                 elif header == 'False':
                     duckdb_params = duckdb_params + ' header=false,'
                 
+                action = data.get("action")
                 sampling = data.get("sampling")
                 duckdb_params = duckdb_params + 'sample_size=' + str(sampling)
 
@@ -159,7 +161,7 @@ def get_instructions(datasetname):
     except requests.exceptions.RequestException as e:
         logging.error(f"Error fetching JSON data: {e}")
 
-    return attribs, templates, duckdb_params, process
+    return attribs, templates, duckdb_params, process, action
 
 
 def pyarrow_to_trino_schema(schema):
@@ -587,10 +589,11 @@ with DAG(
         logging.info(f"unpacked event={event}")
 
         # Based on the datasetname go and get an defined rules
-        attribs, templates, duckdb_params, process = get_instructions(event['dir_name'])
+        attribs, templates, duckdb_params, process, action = get_instructions(event['dir_name'])
         logging.info(f'attributes = {attribs}')
         logging.info(f'templates = {templates}')
         logging.info(f'process = {process}')
+        logging.info(f'action = {action}')
         logging.info(f'duckdb param = {duckdb_params}')
 
         if process == "yesAlways":
