@@ -525,7 +525,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
             table=iceberg_table,
             hive_table=hive_table,
             location=iceberg_path,
-            action
+            action=action
         )
 
         tracking_timer(p_conn, etag, "e_iceberg",x)
@@ -566,6 +566,42 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
     ########################################################################
 
 
+def process_s3_object(bucket, key, etag):
+    
+    event = decode_minio_event(bucket, key, etag)
+    logging.info(f"unpacked event={event}")
+
+    # Based on the datasetname go and get an defined rules
+    attribs, templates, duckdb_params, process, action = get_instructions(event['dir_name'])
+    logging.info(f'attributes = {attribs}')
+    logging.info(f'templates = {templates}')
+    logging.info(f'process = {process}')
+    logging.info(f'action = {action}')
+    logging.info(f'duckdb param = {duckdb_params}')
+
+    if process == "yesAlways":
+            
+        # Compute paarmeters based on data and any templates defined
+        params = compute_params(event,attribs,templates)
+        logging.info(f"Computed Params = {params}")
+
+        ingest_csv_to_iceberg(dataset=params['dataset'],  
+                            tablename=params["tablename"],  
+                            version=params["version"],  
+                            label=params["label"],
+                            etag = event['etag'],
+                            ingest_bucket=event['bucket'],
+                            ingest_key=event['src_file_path'],
+                            dag_id=event['etag']+str(random_with_N_digits(4)),
+                            ingest_delete=False,
+                            duckdb_params=duckdb_params,
+                            action=action,
+                            debug=True)
+    else:
+        logging.info("Instructions to abort processing")
+
+
+
 with DAG(
     dag_id="ingest_csv_to_iceberg3",
     schedule="@once",
@@ -586,38 +622,10 @@ with DAG(
         # Process minio message into structure (two methods separated so the first one can be reused)
         bucket, key, etag = unpack_minio_event(message)
         logging.info(f'unpacked basic = bucket: {bucket}, key: {key}, etag: {etag}')
-        event = decode_minio_event(bucket, key, etag)
-        logging.info(f"unpacked event={event}")
 
-        # Based on the datasetname go and get an defined rules
-        attribs, templates, duckdb_params, process, action = get_instructions(event['dir_name'])
-        logging.info(f'attributes = {attribs}')
-        logging.info(f'templates = {templates}')
-        logging.info(f'process = {process}')
-        logging.info(f'action = {action}')
-        logging.info(f'duckdb param = {duckdb_params}')
-
-        if process == "yesAlways":
-                
-            # Compute paarmeters based on data and any templates defined
-            params = compute_params(event,attribs,templates)
-            logging.info(f"Computed Params = {params}")
-
-            ingest_csv_to_iceberg(dataset=params['dataset'],  
-                                tablename=params["tablename"],  
-                                version=params["version"],  
-                                label=params["label"],
-                                etag = event['etag'],
-                                ingest_bucket=event['bucket'],
-                                ingest_key=event['src_file_path'],
-                                dag_id=event['etag']+str(random_with_N_digits(4)),
-                                ingest_delete=False,
-                                duckdb_params=duckdb_params,
-                                action=action,
-                                debug=True)
-        else:
-            logging.info("Instructions to abort processing")
-
+        # NOTE: done this way as manual trigger could be on another DAG listening to RabbitMQ with message that only has these three variables
+        process_s3_object(bucket, key, etag)
+        
     consume_events = RabbitMQPythonOperator(
         func=process_event,
         task_id="consume_events",
@@ -629,15 +637,15 @@ with DAG(
         retries=999999999,
     )
 
-    create_tracking_table_task = PostgresOperator(
-        task_id='create_tracking_table',
+    create_tracking_task = PostgresOperator(
+        task_id='create_tracking',
         postgres_conn_id='pg_conn',  #drop table if exists tracking ;
         sql=constants.sql_tracking,
         dag=dag,
     )
 
-    create_tracking_table_table_task = PostgresOperator(
-        task_id='create_tracking_table_table',
+    create_tracking_table_task = PostgresOperator(
+        task_id='create_tracking_table',
         postgres_conn_id='pg_conn',  #drop table if exists tracking ;
         sql=constants.sql_trackingtable,
         dag=dag,
@@ -650,4 +658,4 @@ with DAG(
         trigger_rule=TriggerRule.ALL_DONE
     )
 
-    create_tracking_table_task >> create_tracking_table_table_task >> consume_events >> restart_dag
+    create_tracking_task >> create_tracking_table_task >> consume_events >> restart_dag

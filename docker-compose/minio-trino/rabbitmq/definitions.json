@@ -43,15 +43,6 @@
     ],
     "queues":[
        {
-          "name":"airflow",
-          "vhost":"/",
-          "durable":true,
-          "auto_delete":false,
-          "arguments":{
-             
-          }
-       },
-       {
          "name":"afload",
          "vhost":"/",
          "durable":true,
@@ -136,16 +127,6 @@
          "source":"minio",
          "vhost":"/",
          "destination":"afregister",
-         "destination_type":"queue",
-         "routing_key":"",
-         "arguments":{
-            
-         }
-      },
-      {
-         "source":"minio",
-         "vhost":"/",
-         "destination":"airflow",
          "destination_type":"queue",
          "routing_key":"",
          "arguments":{
