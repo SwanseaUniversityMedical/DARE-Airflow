@@ -29,16 +29,19 @@ def compute_params(s3, attribs, templates):
             structure = value.get_structure()
             template = Template(structure["source"])
             searchstring = template.render(s3=s3, attrib=attrib_values)
+            result = ""
             if structure["regex"]:
                 if structure["single"] == True:
                     match = re.search(structure["regex"],searchstring)
                     if match:
-                        attrib_values[key] = match.group()
-                        print(f"SINGLE == {attrib_values[key]}")
+                        result = match.group()
                 else:
-                    attrib_values[key] = re.findall(structure["regex"],searchstring)
+                    result = re.findall(structure["regex"],searchstring)
             else:
-                attrib_values[key] = searchstring  # allow literals
+                result = searchstring  # allow literals
+            
+            attrib_values[key] = result
+            print(f"Attribute search {structure} ==> {result}")
 
     print(f"Compute Ledger Attribute Values : {attrib_values}")
 
