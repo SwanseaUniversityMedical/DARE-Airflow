@@ -10,11 +10,11 @@ assets3_url = 'https://cat-hdp.demo.ukserp.ac.uk/doc/GetFilteredData2?profile=dl
 sql_trackingtable='''                
 CREATE TABLE IF NOT EXISTS trackingtable (
             id VARCHAR(150), 
-            dataset VARCHAR(50), 
-            version VARCHAR(50), 
-            label VARCHAR(50), 
+            dataset VARCHAR(150), 
+            version VARCHAR(150), 
+            label VARCHAR(150), 
             dated timestamp,
-            bucket VARCHAR(50),
+            bucket VARCHAR(150),
             key VARCHAR(150), 
             tablename VARCHAR(150), 
             physical VARCHAR(200)
