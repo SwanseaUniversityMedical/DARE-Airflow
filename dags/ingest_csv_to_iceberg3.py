@@ -99,8 +99,8 @@ def get_instructions(datasetname):
             'https': 'http://192.168.10.15:8080'
         }
         # Fetch JSON data from the URL and parse it into a Python variable
-        response = requests.get(url, proxies=proxy)
-        #response = requests.get(url)
+        #response = requests.get(url, proxies=proxy)
+        response = requests.get(url)
         
         # Check if the response status code is OK (200)
         if response.status_code == 200:

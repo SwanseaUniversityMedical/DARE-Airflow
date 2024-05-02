@@ -41,7 +41,7 @@ def compute_params(s3, attribs, templates):
                 result = searchstring  # allow literals
             
             attrib_values[key] = result
-            print(f"Attribute search {structure} ==> {result}")
+            print(f"Attribute search {key} : {structure} ==> {result}")
 
     print(f"Compute Ledger Attribute Values : {attrib_values}")
 
