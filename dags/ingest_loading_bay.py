@@ -1,6 +1,7 @@
 from datetime import timedelta
 import logging
 import pendulum
+import json
 
 from random import randint
 from airflow import DAG
@@ -21,7 +22,7 @@ from modules.utils.minioevent import unpack_minio_event
 
 
 with DAG(
-    dag_id="ingest_csv_to_iceberg",
+    dag_id="ingest_loading_bay",
     schedule="@once",
     start_date=pendulum.datetime(1900, 1, 1, tz="UTC"),
     catchup=True,
@@ -37,18 +38,20 @@ with DAG(
         logging.info("Processing message!")
         logging.info(f"message={message}")
 
-        # Process minio message into structure (two methods separated so the first one can be reused)
-        bucket, key, etag = unpack_minio_event(message)
-        logging.info(f'unpacked basic = bucket: {bucket}, key: {key}, etag: {etag}')
+        message_json = json.loads(message)
+        bucket = message_json["bucket"]
+        key = message_json["key"]
+        etag = message_json["etag"]
 
-        # NOTE: done this way as manual trigger could be on another DAG listening to RabbitMQ with message that only has these three variables
+        logging.info(f'message parts = bucket: {bucket}, key: {key}, etag: {etag}')
+
         process_s3_object(bucket, key, etag)
         
     consume_events = RabbitMQPythonOperator(
         func=process_event,
         task_id="consume_events",
         rabbitmq_conn_id="rabbitmq_conn",
-        queue_name=constants.rabbitmq_queue_minio_event,
+        queue_name=constants.rabbitmq_queue_object_event,
         deferrable=timedelta(seconds=120),
         poke_interval=timedelta(seconds=1),
         retry_delay=timedelta(seconds=10),

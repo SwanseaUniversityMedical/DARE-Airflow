@@ -29,8 +29,7 @@ with DAG(
         logging.info("Processing message!")
         logging.info(f"message={message}")
 
-        event = unpack_minio_event(message)
-        logging.info(f"event={event}")
+        bucket, key, etag = unpack_minio_event(message)
 
         # Register eTag in postgres if not already there
 
@@ -45,11 +44,10 @@ with DAG(
             port=postgres_conn.port
         )
         cur = conn.cursor()
+        
+        logging.info(f"register adding eTag = {etag}")
 
-        value_to_insert = event["etag"]
-        logging.info(f"register adding eTag = {value_to_insert}")
-
-        sql = f"INSERT INTO register (etag) SELECT '{value_to_insert}'  WHERE NOT EXISTS (SELECT 1 FROM register WHERE etag = '{value_to_insert}' )"
+        sql = f"INSERT INTO register (etag) SELECT '{etag}'  WHERE NOT EXISTS (SELECT 1 FROM register WHERE etag = '{etag}' )"
         cur.execute(sql)
         conn.commit()
         cur.close()

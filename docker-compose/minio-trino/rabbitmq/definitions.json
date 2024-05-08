@@ -110,6 +110,17 @@
           }
        },
        {
+         "name":"load",
+         "vhost":"/",
+         "type":"fanout",
+         "durable":true,
+         "auto_delete":false,
+         "internal":false,
+         "arguments":{
+            
+         }
+      },
+       {
          "name":"notify",
          "vhost":"/",
          "type":"fanout",
@@ -146,6 +157,16 @@
          "source":"notify",
          "vhost":"/",
          "destination":"audit_raw",
+         "destination_type":"queue",
+         "routing_key":"s3",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"load",
+         "vhost":"/",
+         "destination":"afobjectload",
          "destination_type":"queue",
          "routing_key":"s3",
          "arguments":{
