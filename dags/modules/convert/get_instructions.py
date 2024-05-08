@@ -1,11 +1,43 @@
 import dags.constants
 from dags.modules.utils.version import attribute_search
-
-
 import requests
-
-
 import logging
+import json
+import redis
+import constants
+from airflow.hooks.base import BaseHook
+
+def get_json_from_url(url):
+    proxy = {
+        'http': 'http://192.168.10.15:8080',
+        'https': 'http://192.168.10.15:8080'
+    }
+    
+    print(f"GETURL : {url}")
+    
+    response = requests.get(url)
+    #response = requests.get(url,proxies=proxy)
+
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return None
+
+def get_json(url):
+    redis_client = redis.Redis(host='192.168.1.74', port=6379, db=0)
+
+    # Check if JSON is in Redis
+    json_data = redis_client.get(url)
+    if json_data:
+        # If JSON is in Redis, return it
+        return json.loads(json_data)
+    else:
+        # If JSON is not in Redis, fetch from URL
+        json_data = get_json_from_url(url)
+        if json_data:
+            # Store JSON in Redis with expiration time
+            redis_client.setex(url, 3600, json.dumps(json_data))
+        return json_data
 
 
 def get_instructions(datasetname):
@@ -37,10 +69,10 @@ def get_instructions(datasetname):
         response = requests.get(url)
 
         # Check if the response status code is OK (200)
-        if response.status_code == 200:
-            r_data = response.json()
-            logging.info(r_data)
-
+        r_data = get_json(url)            
+        logging.info(r_data)
+        if r_data:
+            
             hits = r_data.get("hits").get("total").get("value")
             logging.info(f"search hits = : {hits}")
 

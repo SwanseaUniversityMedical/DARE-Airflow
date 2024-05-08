@@ -1,17 +1,16 @@
 from datetime import timedelta
-import hashlib
 import logging
-import time
 from dags.modules.convert.get_instructions import get_instructions
 from dags.modules.convert.ingest_csv_to_iceberg import ingest_csv_to_iceberg
 import pendulum
-import codecs
-import chardet
+
 from random import randint
 from airflow import DAG
 from airflow.operators.postgres_operator import PostgresOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.utils.trigger_rule import TriggerRule
+from airflow.hooks.base import BaseHook
+from dags.modules.utils.tracking_timer import tracking_timer
 
 import constants
 
@@ -26,56 +25,6 @@ def random_with_N_digits(n):
     range_start = 10**(n-1)
     range_end = (10**n)-1
     return randint(range_start, range_end)
-
-
-def sha1(value):
-    sha_1 = hashlib.sha1()
-    sha_1.update(str(value).encode('utf-8'))
-    return sha_1.hexdigest()
-
-def is_utf8(data):
-    result = chardet.detect(data)
-    print(f'Encoding determined to be {result}')
-    return result['encoding'] == 'utf-8'
-
-
-def convert_to_utf8(input_path, output_path):
-    with open(input_path, 'rb') as input_file:
-        with codecs.open(output_path, 'w', encoding='utf-8') as output_file:
-            for line in input_file:
-                try:
-                    decoded_line = line.decode('utf-8')
-                except UnicodeDecodeError:
-                    decoded_line = line.decode('iso-8859-1')
-                output_file.write(decoded_line)
-
-
-# GET instructions for Assetsv3 on how to handle this dataset
-def tracking_timer(p_conn, etag, variablename, tstart=time.time()):
-    
-    if str(variablename).startswith('s'):
-        diff = 0    
-        whichmarker = str(variablename).replace('s_','d_')
-    else:
-        enddiff = time.time()
-        diff =  enddiff - tstart
-        whichmarker = str(variablename).replace('e_','d_')
-
-    with p_conn.cursor() as cur:
-        sql = f"UPDATE tracking SET {variablename}=NOW(), {whichmarker}={diff} WHERE id = '{etag}' "
-        cur.execute(sql)
-    p_conn.commit()
-    return time.time()
-
-def tracking_data(p_conn, etag, variablename, data):
-    with p_conn.cursor() as cur:
-            sql = f"UPDATE tracking SET {variablename}={data} WHERE id = '{etag}' "
-            cur.execute(sql)
-    p_conn.commit()
-
-
-    ########################################################################
-
 
 def process_s3_object(bucket, key, etag):
     

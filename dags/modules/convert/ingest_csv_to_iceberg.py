@@ -1,22 +1,51 @@
+
 import dags.constants
-from dags.ingest_csv_to_iceberg import convert_to_utf8, sha1, tracking_data, tracking_timer
 from dags.modules.databases.duckdb import file_csv_to_parquet
 from dags.modules.databases.trino import create_schema, drop_table, get_trino_conn_details, get_trino_engine, hive_create_table_from_parquet, iceberg_create_table_from_hive, validate_identifier, validate_s3_key
 from dags.modules.utils.rabbit import send_message_to_rabbitmq
 from dags.modules.utils.s3 import s3_create_bucket, s3_delete, s3_download_minio, s3_upload
+from dags.modules.utils.tracking_timer import tracking_timer,  tracking_data
 
-
+import constants
 import psycopg2
-
-
+import pyarrow.parquet as pq
 import json
+import s3fs
+
 import logging
 import os
 import os.path
 import time
 from datetime import datetime
-
+import codecs
+import chardet
+import hashlib
+from airflow.hooks.base import BaseHook
 from dags.modules.convert.pyarrow_to_trino_schema import pyarrow_to_trino_schema
+from dags.modules.utils.tracking_timer import tracking_timer
+
+def sha1(value):
+    sha_1 = hashlib.sha1()
+    sha_1.update(str(value).encode('utf-8'))
+    return sha_1.hexdigest()
+
+def is_utf8(data):
+    result = chardet.detect(data)
+    print(f'Encoding determined to be {result}')
+    return result['encoding'] == 'utf-8'
+
+
+def convert_to_utf8(input_path, output_path):
+    with open(input_path, 'rb') as input_file:
+        with codecs.open(output_path, 'w', encoding='utf-8') as output_file:
+            for line in input_file:
+                try:
+                    decoded_line = line.decode('utf-8')
+                except UnicodeDecodeError:
+                    decoded_line = line.decode('iso-8859-1')
+                output_file.write(decoded_line)
+
+
 
 
 def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucket, ingest_key, dag_id, ingest_delete, duckdb_params, action, debug):
@@ -43,26 +72,6 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
     ########################################################################
 
     logging.info("Starting function ingest_csv_to_iceberg...")
-
-    # Extract the Airflow context object for this run of the DAG
-    context = get_current_context()
-    logging.info(f"context={context}")
-
-    # Extract the task instance object for handling XCOM variables
-    ti = context['ti']
-    logging.info(f"ti={ti}")
-
-    # Extract the JSON dict of params for this run of the DAG
-    conf = context['dag_run'].conf
-    logging.info(f"conf={conf}")
-
-    # Unique hashed name for this run of the DAG
-    dag_hash = sha1(
-        f"dag_id={ti.dag_id}/"
-        f"run_id={ti.run_id}/"
-        f"task_id={ti.task_id}"
-    )
-    logging.info(f"dag_hash={dag_hash}")
 
     ########################################################################
 
@@ -117,7 +126,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         "delete": ingest_delete,
     }
     logging.info(f"ingest={ingest}")
-    ti.xcom_push("ingest", ingest)
+    #ti.xcom_push("ingest", ingest)
 
     # create tracking entry
     with p_conn.cursor() as cur:
@@ -143,7 +152,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         "path": hive_path,
     }
     logging.info(f"hive={hive}")
-    ti.xcom_push("hive", hive)
+    #ti.xcom_push("hive", hive)
 
     iceberg_schema = f"iceberg.{dataset}"  # "iceberg.ingest"
 
@@ -172,7 +181,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         "path": iceberg_path,
     }
     logging.info(f"iceberg={iceberg}")
-    ti.xcom_push("iceberg", iceberg)
+    #ti.xcom_push("iceberg", iceberg)
 
     # Use streaming ?
     if False :
