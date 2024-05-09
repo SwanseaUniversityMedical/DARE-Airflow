@@ -12,6 +12,7 @@ import pyarrow.parquet as pq
 import json
 import s3fs
 
+import subprocess
 import logging
 import os
 import os.path
@@ -159,6 +160,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
     iceberg_schema = f"iceberg.{dataset}"  # "iceberg.ingest"
 
     tablename_ext = ""
+
     #if version:
     #    tablename_ext = tablename_ext + f"_{version}"
     if append_GUID:
@@ -173,7 +175,8 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         iceberg_bucket = dataset
         iceberg_dir = validate_s3_key(f"{version}")
 
-    iceberg_path = validate_s3_key(f"{iceberg_bucket}/{iceberg_dir}/{tablename}")
+    tablename2 = tablename.replace("-","_").replace("+","_").replace(" ","_")
+    iceberg_path = validate_s3_key(f"{iceberg_bucket}/{iceberg_dir}/{tablename2}")
 
     iceberg = {
         "schema": iceberg_schema,
@@ -213,10 +216,20 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
 
         print(f'Downloading object from S3 from {ingest_bucket} --> {ingest_key}')
         down_dest=temp_dir+ingest_file
-        s3_download_minio("s3_conn", bucket_name=ingest_bucket, object_name=ingest_key, local_file_path=down_dest)
+        s3_download_minio("s3_conn", bucket_name=ingest_bucket, object_name=ingest_key.replace("+"," "), local_file_path=down_dest)
 
         tracking_timer(p_conn, etag, "e_download",x)
         tracking_data(p_conn,etag,'filesize', os.path.getsize(down_dest))
+
+########################################
+#temp manual SED
+        logging.info("Running SED")
+        sed_command = F"sed -i '1s/-//g' {down_dest}"        
+        subprocess.run(sed_command, shell=True)
+
+########################################
+
+
         x=tracking_timer(p_conn, etag, "s_convert")
 
         # DUCKDB needs UTF-8 files, so check

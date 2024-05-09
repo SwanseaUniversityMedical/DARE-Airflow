@@ -10,9 +10,9 @@ from botocore.config import Config
 
 logger = logging.getLogger(__name__)
 
-
 def validate_s3_key(key):
     # Validate the s3 key is strictly one or more slash separated keys
+    logging.info(f"Validate key: {key}")
     assert re.match(
         r'^(?:[a-z0-9\-_]+)(?:/(?:[a-z0-9\-_]+))*$',
         key,

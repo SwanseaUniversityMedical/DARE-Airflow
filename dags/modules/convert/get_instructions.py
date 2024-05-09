@@ -36,7 +36,7 @@ def get_json(url):
         json_data = get_json_from_url(url)
         if json_data:
             # Store JSON in Redis with expiration time
-            redis_client.setex(url, 3600, json.dumps(json_data))
+            redis_client.setex(url, constants.redis_expiry, json.dumps(json_data))
         return json_data
 
 
