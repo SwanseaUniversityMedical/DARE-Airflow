@@ -4,6 +4,7 @@ from dags.modules.utils.minioevent import decode_minio_event
 from dags.modules.utils.version import compute_params
 from random import randint
 import logging
+import json
 
 def random_with_N_digits(n):
     range_start = 10**(n-1)
@@ -30,6 +31,8 @@ def process_s3_object(bucket, key, etag):
         params = compute_params(event,attribs,templates)
         logging.info(f"Computed Params = {params}")
 
+        tracking = {"process":{process},"attributes":{json.dumps(attribs)}, "templates":{json.dumps(templates)},"action":{action},"duckdb":{duckdb_params}, "params":{json.dumps(params)}}
+        
         ingest_csv_to_iceberg(dataset=params['dataset'],
                             tablename=params["tablename"],
                             version=params["version"],
@@ -41,6 +44,7 @@ def process_s3_object(bucket, key, etag):
                             ingest_delete=False,
                             duckdb_params=duckdb_params,
                             action=action,
-                            debug=True)
+                            debug=True,
+                            tracking=json.dumps(tracking))
     else:
         logging.info("Instructions to abort processing")

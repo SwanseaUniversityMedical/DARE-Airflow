@@ -22,3 +22,10 @@ def tracking_data(p_conn, etag, variablename, data):
             sql = f"UPDATE tracking SET {variablename}={data} WHERE id = '{etag}' "
             cur.execute(sql)
     p_conn.commit()
+
+def tracking_data_str(p_conn, etag, variablename, data):
+    with p_conn.cursor() as cur:
+            sql = f"UPDATE tracking SET {variablename}='{data}' WHERE id = '{etag}' "
+            print(sql)
+            cur.execute(sql)
+    p_conn.commit()

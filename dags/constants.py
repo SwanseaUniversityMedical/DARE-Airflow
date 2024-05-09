@@ -20,15 +20,16 @@ CREATE TABLE IF NOT EXISTS trackingtable (
             label VARCHAR(150), 
             dated timestamp,
             bucket VARCHAR(150),
-            key VARCHAR(150), 
+            key VARCHAR(350), 
             tablename VARCHAR(150), 
             physical VARCHAR(200)
         );
         '''
 
 sql_tracking='''                
+DROP TABLE tracking;
 CREATE TABLE IF NOT EXISTS tracking (
-            id VARCHAR(150), 
+id VARCHAR(350), 
 bucket VARCHAR(100),
 path VARCHAR(500),
 s_marker timestamp,
@@ -37,6 +38,12 @@ d_marker INT,
 dataset VARCHAR(100),
 version VARCHAR(100),
 label VARCHAR(200),
+schema_hive VARCHAR(150),
+tablename_hive VARCHAR(200),
+location_hive VARCHAR(300),
+schema_ice VARCHAR(150),
+tablename_ice VARCHAR(200),
+location_ice VARCHAR(300),
 filesize BIGINT,
 filesize_par BIGINT,
 columns INT,
@@ -60,6 +67,7 @@ e_hive timestamp,
 d_hive INT,
 s_iceberg timestamp,
 e_iceberg timestamp,
-d_iceberg INT
+d_iceberg INT,
+params VARCHAR(1000)
         );
         '''

@@ -4,7 +4,7 @@ from dags.modules.databases.duckdb import file_csv_to_parquet
 from dags.modules.databases.trino import create_schema, drop_table, get_trino_conn_details, get_trino_engine, hive_create_table_from_parquet, iceberg_create_table_from_hive, validate_identifier, validate_s3_key
 from dags.modules.utils.rabbit import send_message_to_rabbitmq
 from dags.modules.utils.s3 import s3_create_bucket, s3_delete, s3_download_minio, s3_upload
-from dags.modules.utils.tracking_timer import tracking_timer,  tracking_data
+from dags.modules.utils.tracking_timer import tracking_timer,  tracking_data, tracking_data_str
 
 import constants
 import psycopg2
@@ -48,7 +48,7 @@ def convert_to_utf8(input_path, output_path):
 
 
 
-def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucket, ingest_key, dag_id, ingest_delete, duckdb_params, action, debug):
+def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucket, ingest_key, dag_id, ingest_delete, duckdb_params, action, debug, tracking):
 
     ########################################################################
     # Key settings
@@ -135,6 +135,8 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
     p_conn.commit()
     x2 = time.time()
 
+    tracking_data_str(p_conn,etag,'params', tracking)
+
     hive_schema = load_layer_schema
     hive_table = validate_identifier(f"{hive_schema}.{dataset}_{dag_id}")
     hive_bucket = load_layer_bucket
@@ -161,7 +163,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
     #    tablename_ext = tablename_ext + f"_{version}"
     if append_GUID:
         tablename_ext = tablename_ext + f"_{dag_id}"
-    tempTabName = f"{iceberg_schema}.{tablename}{tablename_ext}".replace("-","_")
+    tempTabName = f"{iceberg_schema}.{tablename}{tablename_ext}".replace("-","_").replace("+","_")
     logging.info(f"proposed iceberg name = {tempTabName}")
     iceberg_table = validate_identifier(tempTabName)
 
@@ -312,6 +314,9 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         )
 
         tracking_timer(p_conn, etag, "e_schema",x)
+        tracking_data_str(p_conn,etag,'schema_hive', hive_schema)
+        tracking_data_str(p_conn,etag,'tablename_hive', hive_table)
+        tracking_data_str(p_conn,etag,'location_hive', hive_path)
 
         send_message_to_rabbitmq('rabbitmq_conn',constants.rabbitmq_exchange_notify, constants.rabbitmq_exchange_notify_key_trino,
                                  {"dataset":dataset,"version":version,"label":label,"dated":formatted_date,
@@ -331,6 +336,9 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         )
 
         tracking_timer(p_conn, etag, "e_iceberg",x)
+        tracking_data_str(p_conn,etag,'schema_ice', iceberg_schema)
+        tracking_data_str(p_conn,etag,'tablename_ice', iceberg_table)
+        tracking_data_str(p_conn,etag,'location_ice', iceberg_path)
 
         send_message_to_rabbitmq('rabbitmq_conn',constants.rabbitmq_exchange_notify, constants.rabbitmq_exchange_notify_key_trino_iceberg,
                                  {"dataset":dataset,"version":version,"label":label,"dated":formatted_date,
