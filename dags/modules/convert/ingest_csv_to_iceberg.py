@@ -163,7 +163,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
     #    tablename_ext = tablename_ext + f"_{version}"
     if append_GUID:
         tablename_ext = tablename_ext + f"_{dag_id}"
-    tempTabName = f"{iceberg_schema}.{tablename}{tablename_ext}".replace("-","_").replace("+","_")
+    tempTabName = f"{iceberg_schema}.{tablename}{tablename_ext}".replace("-","_").replace("+","_").replace(" ","_")
     logging.info(f"proposed iceberg name = {tempTabName}")
     iceberg_table = validate_identifier(tempTabName)
 

@@ -31,9 +31,11 @@ def process_s3_object(bucket, key, etag):
         params = compute_params(event,attribs,templates)
         logging.info(f"Computed Params = {params}")
 
-        tracking = {"process":{process}}
+        tracking ={"process":{process}}
+
         #tracking = {"process":{process},"attributes":{json.dumps(attribs)}, "templates":{json.dumps(templates)},"action":{action},"duckdb":{duckdb_params}, "params":{json.dumps(params)}}
         #logging.info(f"tracking : {tracking}")
+        tracking_str = json.dumps(tracking)
 
         ingest_csv_to_iceberg(dataset=params['dataset'],
                             tablename=params["tablename"],
@@ -47,6 +49,6 @@ def process_s3_object(bucket, key, etag):
                             duckdb_params=duckdb_params,
                             action=action,
                             debug=True,
-                            tracking=json.dumps(tracking))
+                            tracking=tracking_str)
     else:
         logging.info("Instructions to abort processing")
