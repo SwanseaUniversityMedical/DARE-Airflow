@@ -15,8 +15,8 @@ def get_json_from_url(url):
     
     print(f"GETURL : {url}")
     
-    response = requests.get(url)
-    #response = requests.get(url,proxies=proxy)
+    #response = requests.get(url)
+    response = requests.get(url,proxies=proxy)
 
     if response.status_code == 200:
         return response.json()
