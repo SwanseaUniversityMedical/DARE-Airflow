@@ -24,7 +24,7 @@ def get_json_from_url(url):
         return None
 
 def get_json(url):
-    redis_client = redis.Redis(host='192.168.1.74', port=6379, db=0)
+    redis_client = redis.Redis(host='192.168.70.92', port=6379, db=0)
 
     # Check if JSON is in Redis
     json_data = redis_client.get(url)
