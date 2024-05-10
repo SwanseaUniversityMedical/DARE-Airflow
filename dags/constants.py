@@ -14,8 +14,7 @@ redis_expiry = 30
 
 assets3_url = 'https://cat-hdp.demo.ukserp.ac.uk/doc/GetFilteredData2?profile=dlm&Filter=%22Dataset='
 
-sql_trackingtable='''       
-DROP TABLE trackingtable;          
+sql_trackingtable='''               
 CREATE TABLE IF NOT EXISTS trackingtable (
             id VARCHAR(150), 
             dataset VARCHAR(150), 
@@ -30,7 +29,6 @@ CREATE TABLE IF NOT EXISTS trackingtable (
         '''
 
 sql_tracking='''                
-DROP TABLE tracking;
 CREATE TABLE IF NOT EXISTS tracking (
 id VARCHAR(350), 
 bucket VARCHAR(100),
