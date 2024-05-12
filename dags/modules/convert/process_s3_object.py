@@ -18,7 +18,12 @@ def process_s3_object(bucket, key, etag):
     logging.info(f"unpacked event={event}")
 
     # Based on the datasetname go and get an defined rules
-    attribs, templates, duckdb_params, process, action = get_instructions(event['dir_name'])
+    attribs, templates, duckdb_params, process, action, defaultUsed = get_instructions(event['dir_name'])
+    # use bucket settings if no Dataset settings
+    if defaultUsed:
+        attribs, templates, duckdb_params, process, action, defaultUsed = get_instructions(f"BUCKET-{bucket}")
+
+    logging.info(f'default uwsed = {defaultUsed}')
     logging.info(f'attributes = {attribs}')
     logging.info(f'templates = {templates}')
     logging.info(f'process = {process}')

@@ -42,6 +42,8 @@ def get_json(url):
 
 def get_instructions(datasetname):
 
+    defaultUsed = True
+
     # need to compute this
     url =  constants.assets3_url + datasetname
     logging.info(f'Getting loading instructions from {url}')
@@ -77,6 +79,7 @@ def get_instructions(datasetname):
             logging.info(f"search hits = : {hits}")
 
             if hits == 1:  # single answer
+                defaultUsed = False
 
                 data = r_data.get("hits").get("hits")[0].get("_source")
                 logging.info(data)
@@ -132,4 +135,4 @@ def get_instructions(datasetname):
     except requests.exceptions.RequestException as e:
         logging.error(f"Error fetching JSON data: {e}")
 
-    return attribs, templates, duckdb_params, process, action
+    return attribs, templates, duckdb_params, process, action, defaultUsed
