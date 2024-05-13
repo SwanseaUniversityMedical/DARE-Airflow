@@ -45,7 +45,7 @@ with DAG(
 
         logging.info(f'message parts = bucket: {bucket}, key: {key}, etag: {etag}')
 
-        process_s3_object(bucket, key, etag)
+        process_s3_object(bucket, key, etag, constants.process_s3_option_load)
         
     consume_events = RabbitMQPythonOperator(
         func=process_event,
