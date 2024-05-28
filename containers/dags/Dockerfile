@@ -1,4 +1,4 @@
-FROM apache/airflow:2.8.4-python3.10 as build
+FROM harbor.ukserp.ac.uk/backups/airflow/base:1.7.3 as build
 
 # Ensure that release notes get picked up from our repo and not from the apache airflow base repo
 # If the apache airflow notes are used we will incorrectly pickup the release notes from our version
