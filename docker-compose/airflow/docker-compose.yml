@@ -35,7 +35,7 @@
 #                              Default: airflow
 #
 # Feel free to modify this file to suit your needs.
----
+
 version: '3'
 x-airflow-common:
   &airflow-common
