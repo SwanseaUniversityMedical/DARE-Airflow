@@ -25,7 +25,7 @@ def get_json_from_url(url):
 
 def get_json(url):
     redis_conn = BaseHook.get_connection('redis_conn')
-    redis_client = redis.Redis(host=redis_conn.host, port=redis_conn.port, db=redis_conn.db)
+    redis_client = redis.Redis(host=redis_conn.host, port=redis_conn.port, db=0)
 
     # Check if JSON is in Redis
     json_data = redis_client.get(url)
