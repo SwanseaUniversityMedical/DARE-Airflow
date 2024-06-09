@@ -37,12 +37,14 @@ def process_s3_object(bucket, key, etag, action):
     logging.info(f"Computed Params = {params}")
 
 
+    #tracking ={"process":{process}}
+    tracking = {"process":{process},"attributes":{json.dumps(attribs)}, "templates":{json.dumps(templates)},"action":{action},"duckdb":{duckdb_params}, "params":{json.dumps(params)}}
+    logging.info(f"tracking : {tracking}")
+    
     # should we load data ?
     if action != constants.process_s3_option_whatif and process != constants.process_s3_formoption_no and ( action == constants.process_s3_option_manual or (process == constants.process_s3_formoption_yesauto and action == constants.process_s3_option_load )):
 
-        #tracking ={"process":{process}}
-        #tracking = {"process":{process},"attributes":{json.dumps(attribs)}, "templates":{json.dumps(templates)},"action":{action},"duckdb":{duckdb_params}, "params":{json.dumps(params)}}
-        #logging.info(f"tracking : {tracking}")
+      
         tracking_str = "nothing"
 
         ingest_csv_to_iceberg(dataset=params['dataset'],
