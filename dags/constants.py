@@ -14,6 +14,8 @@ redis_expiry = 30
 
 assets3_url = 'https://cat-hdp.demo.ukserp.ac.uk/doc/GetFilteredData2?profile=dlm&Filter=%22Dataset='
 
+
+process_s3_option_default   = "default"
 process_s3_option_load   = "load"
 process_s3_option_manual = "manual"
 process_s3_option_whatif = "whatif"

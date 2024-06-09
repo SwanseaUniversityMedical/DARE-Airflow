@@ -40,9 +40,9 @@ def process_s3_object(bucket, key, etag, action):
     #tracking ={"process":{process}}
     tracking = {"process":{process},"attributes":{json.dumps(attribs)}, "templates":{json.dumps(templates)},"action":{action},"duckdb":{duckdb_params}, "params":{json.dumps(params)}}
     logging.info(f"tracking : {tracking}")
-    
+
     # should we load data ?
-    if action != constants.process_s3_option_whatif and process != constants.process_s3_formoption_no and ( action == constants.process_s3_option_manual or (process == constants.process_s3_formoption_yesauto and action == constants.process_s3_option_load )):
+    if action != constants.process_s3_option_whatif and process != constants.process_s3_formoption_no and ( action == constants.process_s3_option_manual or (process == constants.process_s3_formoption_yesauto and (action == constants.process_s3_option_load or action == constants.process_s3_option_default ) )):
 
       
         tracking_str = "nothing"
