@@ -164,7 +164,7 @@ def drop_table(trino: sqlalchemy.engine.Engine, table: str):
     trino.execute(query)
 
 
-def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name, schema_name):
+def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name, schema_name, full_table):
    
     # Reflect the table from the database
     metadata = MetaData()
@@ -179,7 +179,7 @@ def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name,
     def get_max_values(table):
         max_values = {}
         for column in table.columns:
-            stmt = select([func.max(column)])
+            stmt = f"select max({column.name}) from {full_table}"
             result = trino.execute(stmt).scalar()
             max_values[column.name] = result
         return max_values

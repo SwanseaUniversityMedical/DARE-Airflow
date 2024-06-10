@@ -371,7 +371,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
 
         logging.info("*****SIMON")
         # iceberg_table.replace(iceberg_schema+'.',"")
-        test = get_table_schema_and_max_values(trino,iceberg_table.replace(iceberg_schema+'.',""),"test")
+        test = get_table_schema_and_max_values(trino,iceberg_table.replace(iceberg_schema+'.',""),"test",iceberg_table)
         logging.info(test)
 
     finally:
