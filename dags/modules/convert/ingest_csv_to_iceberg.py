@@ -1,7 +1,7 @@
 
 import dags.constants
 from dags.modules.databases.duckdb import file_csv_to_parquet
-from dags.modules.databases.trino import create_schema, drop_table, get_trino_conn_details, get_trino_engine, hive_create_table_from_parquet, iceberg_create_table_from_hive, validate_identifier, validate_s3_key
+from dags.modules.databases.trino import create_schema, drop_table, get_trino_conn_details, get_trino_engine, hive_create_table_from_parquet, iceberg_create_table_from_hive, validate_identifier, validate_s3_key, get_table_schema_and_max_values
 from dags.modules.utils.rabbit import send_message_to_rabbitmq
 from dags.modules.utils.s3 import s3_create_bucket, s3_delete, s3_download_minio, s3_upload
 from dags.modules.utils.tracking_timer import tracking_timer,  tracking_data, tracking_data_str
@@ -349,6 +349,10 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         # "schema":schema  can not be json serialised, so need to sort that ???
 
         x=tracking_timer(p_conn, etag, "s_iceberg")
+
+        test = hive_create_table_from_parquet(trino,hive_table)
+        logging.info("*****SIMON")
+        logging.info(test)
 
         logging.info("Create table in Iceberg connector...")
         iceberg_create_table_from_hive(

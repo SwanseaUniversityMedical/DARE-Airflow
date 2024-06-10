@@ -6,6 +6,7 @@ from ..utils.sql import validate_column, validate_identifier
 
 logger = logging.getLogger(__name__)
 
+from sqlalchemy import MetaData, Table, select, func
 
 def get_trino_conn_details(conn_name: str = 'trino_conn') -> dict:
     """Gets trino connection info from Airflow connection with connection id that is provided by the user.
@@ -161,3 +162,35 @@ def drop_table(trino: sqlalchemy.engine.Engine, table: str):
     query = f"DROP TABLE " \
             f"{validate_identifier(table)}"
     trino.execute(query)
+
+
+def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name):
+   
+    # Reflect the table from the database
+    metadata = MetaData()
+    table = Table(table_name, metadata, autoload_with=trino)
+
+    # Get the schema of the table
+    schema = {}
+    for column in table.columns:
+        schema[column.name] = str(column.type)
+
+    # Function to get the maximum value of each column in the table
+    def get_max_values(table):
+        max_values = {}
+        for column in table.columns:
+            stmt = select([func.max(column)])
+            result = engine.execute(stmt).scalar()
+            max_values[column.name] = result
+        return max_values
+
+    # Get the max values of each column
+    max_values = get_max_values(table)
+
+    # Combine schema and max values in a result dictionary
+    result = {
+        'schema': schema,
+        'max_values': max_values
+    }
+
+    return result
