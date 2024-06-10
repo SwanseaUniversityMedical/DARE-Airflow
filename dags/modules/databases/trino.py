@@ -164,11 +164,11 @@ def drop_table(trino: sqlalchemy.engine.Engine, table: str):
     trino.execute(query)
 
 
-def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name):
+def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name, schema_name):
    
     # Reflect the table from the database
     metadata = MetaData()
-    table = Table(table_name, metadata, autoload_with=trino)
+    table = Table(table_name, metadata, autoload_with=trino, schema=schema_name)
 
     # Get the schema of the table
     schema = {}

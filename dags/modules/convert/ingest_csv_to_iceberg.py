@@ -349,11 +349,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         # "schema":schema  can not be json serialised, so need to sort that ???
 
         x=tracking_timer(p_conn, etag, "s_iceberg")
-
-        test = get_table_schema_and_max_values(trino,hive_table)
-        logging.info("*****SIMON")
-        logging.info(test)
-
+   
         logging.info("Create table in Iceberg connector...")
         iceberg_create_table_from_hive(
             trino,
@@ -372,6 +368,10 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         send_message_to_rabbitmq('rabbitmq_conn',constants.rabbitmq_exchange_notify, constants.rabbitmq_exchange_notify_key_trino_iceberg,
                                  {"dataset":dataset,"version":version,"label":label,"dated":formatted_date,
                                   "s3location":iceberg_path, "dbtable": iceberg_table})
+
+        logging.info("*****SIMON")
+        test = get_table_schema_and_max_values(trino,iceberg_table,iceberg_schema)
+        logging.info(test)
 
     finally:
         if debug:
