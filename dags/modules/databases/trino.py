@@ -178,7 +178,7 @@ def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name,
         logging.info(column)
         schema[column.name] = str(column.type)
         stmt = f"select max({column.name}) from {full_table}"
-        if str(column.type ) = 'VARCHAR':
+        if str(column.type) == 'VARCHAR':
             stmt = f"select max(length({column.name})) from {full_table}"
         result = trino.execute(stmt).scalar()
         max_values[column.name] = result
