@@ -172,20 +172,16 @@ def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name,
 
     # Get the schema of the table
     schema = {}
+    max_values = {}
+
     for column in table.columns:
+        logging.info(column)
         schema[column.name] = str(column.type)
-
-    # Function to get the maximum value of each column in the table
-    def get_max_values(table):
-        max_values = {}
-        for column in table.columns:
-            stmt = f"select max({column.name}) from {full_table}"
-            result = trino.execute(stmt).scalar()
-            max_values[column.name] = result
-        return max_values
-
-    # Get the max values of each column
-    max_values = get_max_values(table)
+        stmt = f"select max({column.name}) from {full_table}"
+        if str(column.type ) = 'VARCHAR':
+            stmt = f"select max(length({column.name})) from {full_table}"
+        result = trino.execute(stmt).scalar()
+        max_values[column.name] = result
 
     # Combine schema and max values in a result dictionary
     result = {
