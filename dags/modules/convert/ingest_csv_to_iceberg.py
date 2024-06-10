@@ -11,7 +11,7 @@ import psycopg2
 import pyarrow.parquet as pq
 import json
 import s3fs
-
+import re
 import subprocess
 import logging
 import os
@@ -47,7 +47,17 @@ def convert_to_utf8(input_path, output_path):
                 output_file.write(decoded_line)
 
 
+def validate_sed_expression(expression):
+    # Basic pattern to match common sed substitution commands
+    sed_pattern = re.compile(r'^\d*s/.*?/.*/[gIp]*$')
+    logging.info(f"Checkign sed pression : {expression}")
 
+    if sed_pattern.match(expression):
+        logging.info("Valid sed expression")
+        return True
+    else:
+        logging.info("Invalid sed expression")
+        return False
 
 def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucket, ingest_key, dag_id, ingest_delete, duckdb_params, action, debug, tracking):
 
@@ -224,8 +234,10 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
 ########################################
 #temp manual SED
         logging.info("Running SED")
-        sed_command = F"sed -i '1s/[-' ''('')'':']//g' {down_dest}"        
-        subprocess.run(sed_command, shell=True)
+        sed_expression = F"1s/[-' ''('')'':']//g"
+        sed_command = F"sed -i '{sed_expression}' {down_dest}" 
+        if validate_sed_expression(sed_expression):
+            subprocess.run(sed_command, shell=True)
 
 ########################################
 
