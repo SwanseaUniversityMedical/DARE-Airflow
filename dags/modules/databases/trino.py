@@ -6,7 +6,8 @@ from ..utils.sql import validate_column, validate_identifier
 
 logger = logging.getLogger(__name__)
 
-from sqlalchemy import MetaData, Table, select, func
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
 
 def get_trino_conn_details(conn_name: str = 'trino_conn') -> dict:
     """Gets trino connection info from Airflow connection with connection id that is provided by the user.
@@ -163,25 +164,36 @@ def drop_table(trino: sqlalchemy.engine.Engine, table: str):
             f"{validate_identifier(table)}"
     trino.execute(query)
 
+def get_schema(engine, table_name):
+        query = f"SHOW COLUMNS FROM {table_name}"
+        try:
+            result = engine.execute(text(query))
+            schema = {row['Column']: row['Type'] for row in result}
+            return schema
+        except SQLAlchemyError as e:
+            print(f"Error executing query: {e}")
+            return None
 
-def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name, schema_name, full_table):
+def get_max_values(engine, table_name, schema):
+        max_values = {}
+        for column in schema.keys():
+            query = f"SELECT MAX({column}) as max_value FROM {table_name}"
+            if schema(column) == "varchar":
+                query = f"SELECT MAX(length({column})) as max_length FROM {table_name}"
+            try:
+                result = engine.execute(text(query)).scalar()
+                max_values[column] = result
+            except SQLAlchemyError as e:
+                print(f"Error executing query: {e}")
+                max_values[column] = None
+        return max_values
+
+def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name ):
    
     # Reflect the table from the database
-    metadata = MetaData()
-    table = Table(table_name, metadata, autoload_with=trino, schema=schema_name)
+    schema = get_schema(trino,table_name=)
 
-    # Get the schema of the table
-    schema = {}
-    max_values = {}
-
-    for column in table.columns:
-        logging.info(column)
-        schema[column.name] = str(column.type)
-        stmt = f"select max({column.name}) from {full_table}"
-        if str(column.type) == 'VARCHAR':
-            stmt = f"select max(length({column.name})) from {full_table}"
-        result = trino.execute(stmt).scalar()
-        max_values[column.name] = result
+    max_values = get_max_values(trino, table_name, schema)
 
     # Combine schema and max values in a result dictionary
     result = {
