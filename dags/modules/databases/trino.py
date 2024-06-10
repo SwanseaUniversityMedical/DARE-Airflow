@@ -191,7 +191,7 @@ def get_max_values(engine, table_name, schema):
 def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name ):
    
     # Reflect the table from the database
-    schema = get_schema(trino,table_name=)
+    schema = get_schema(trino,table_name)
 
     max_values = get_max_values(trino, table_name, schema)
 
