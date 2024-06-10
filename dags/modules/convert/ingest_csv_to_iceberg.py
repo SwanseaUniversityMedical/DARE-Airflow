@@ -369,9 +369,10 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
                                  {"dataset":dataset,"version":version,"label":label,"dated":formatted_date,
                                   "s3location":iceberg_path, "dbtable": iceberg_table})
 
-        logging.info("*****SIMON")
+        
         # iceberg_table.replace(iceberg_schema+'.',"")
         test = get_table_schema_and_max_values(trino,iceberg_table)
+        logging.info("*****SIMON - temp print schema for schema compare")
         logging.info(test)
 
     finally:
