@@ -178,7 +178,7 @@ def get_max_values(engine, table_name, schema):
         max_values = {}
         for column in schema.keys():
             query = f"SELECT MAX({column}) as max_value FROM {table_name}"
-            if schema(column) == "varchar":
+            if schema[column] == "varchar":
                 query = f"SELECT MAX(length({column})) as max_length FROM {table_name}"
             try:
                 result = engine.execute(text(query)).scalar()
