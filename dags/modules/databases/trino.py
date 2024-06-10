@@ -180,7 +180,7 @@ def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name,
         max_values = {}
         for column in table.columns:
             stmt = select([func.max(column)])
-            result = engine.execute(stmt).scalar()
+            result = trino.execute(stmt).scalar()
             max_values[column.name] = result
         return max_values
 
