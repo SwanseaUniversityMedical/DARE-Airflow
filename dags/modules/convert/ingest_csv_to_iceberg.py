@@ -224,7 +224,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
 ########################################
 #temp manual SED
         logging.info("Running SED")
-        sed_command = F"sed -i '1s/-//g' {down_dest}"        
+        sed_command = F"sed -i '1s/[-' ''('')'':']//g' {down_dest}"        
         subprocess.run(sed_command, shell=True)
 
 ########################################
