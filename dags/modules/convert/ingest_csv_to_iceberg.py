@@ -350,7 +350,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
 
         x=tracking_timer(p_conn, etag, "s_iceberg")
 
-        test = hive_create_table_from_parquet(trino,hive_table)
+        test = get_table_schema_and_max_values(trino,hive_table)
         logging.info("*****SIMON")
         logging.info(test)
 
