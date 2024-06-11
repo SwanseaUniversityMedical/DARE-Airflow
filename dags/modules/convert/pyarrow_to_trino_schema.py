@@ -28,7 +28,7 @@ def pyarrow_to_trino_schema(schema):
         elif field_type.startswith('Bool'):
             trino_type = 'BOOLEAN'
         elif field_type.startswith('Time'):
-            trino_type = 'TIME'
+            trino_type = 'TIMESTAMP'
         elif field_type.startswith('Timestamp'):
             trino_type = 'TIMESTAMP'
         elif field_type.startswith('Date'):
