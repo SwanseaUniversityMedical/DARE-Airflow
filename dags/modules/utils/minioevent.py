@@ -16,7 +16,7 @@ def decode_minio_event(bucket, key, etag):
   
     src_file_path: str = key.replace('%2F', '/')
     paths = src_file_path.split("/")
-    extension = src_file_path.split("/")[-1].split(".")[1]
+    extension = src_file_path.split("/")[-1].split(".")[1].lower()
     file_name = src_file_path.replace(extension, "")
     dir_name = paths[0]
     full_file_path = key

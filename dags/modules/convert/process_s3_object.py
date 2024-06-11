@@ -44,7 +44,8 @@ def process_s3_object(bucket, key, etag, action):
     # should we load data ?
     if action != constants.process_s3_option_whatif and process != constants.process_s3_formoption_no and ( action == constants.process_s3_option_manual or (process == constants.process_s3_formoption_yesauto and (action == constants.process_s3_option_load or action == constants.process_s3_option_default ) )):
 
-      
+        logging.info(f"Extension ==> {event['extension']}")
+        
         tracking_str = "nothing"
 
         ingest_csv_to_iceberg(dataset=params['dataset'],
