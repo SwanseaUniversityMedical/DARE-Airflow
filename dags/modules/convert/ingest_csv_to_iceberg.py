@@ -384,11 +384,12 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
 
             logging.info("Cleanup data from Hive connector in s3...")
             # External location data is not cascade deleted on drop table
-            s3_delete(
-                conn_id="s3_conn",
-                bucket=hive_bucket,
-                key=hive_key
-            )
+            # SIMON: removed as drop table will remove from S3
+            #s3_delete(
+            #    conn_id="s3_conn",
+            #    bucket=hive_bucket,
+            #    key=hive_key
+            #)
 
     with p_conn.cursor() as cur:
         sql = f"INSERT INTO trackingtable (id, dataset,version,label,dated,bucket,key) SELECT '{etag}','{dataset}','{version}','{label}', NOW(), '{ingest_bucket}', '{ingest_key}' WHERE NOT EXISTS (SELECT 1 FROM trackingtable WHERE id = '{etag}' )"
