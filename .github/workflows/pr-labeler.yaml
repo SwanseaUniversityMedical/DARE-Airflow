@@ -14,4 +14,4 @@ concurrency:
 
 jobs:
   pr-labeler:
-    uses: SwanseaUniversityMedical/workflows/.github/workflows/pr-labeler.yaml@v1.0.0-pr-labeler
+    uses: SwanseaUniversityMedical/workflows/.github/workflows/pr-labeler.yaml@v1.1.1-pr-labeler
