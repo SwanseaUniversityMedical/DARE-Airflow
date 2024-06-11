@@ -49,11 +49,11 @@ def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: s
 
 def file_csv_to_parquet(src_file: str, dest_file: str, duckdb_params: str, memory: int = 40):
     
-    con = duckdb.connect(database=':memory:')
+    #con = duckdb.connect(database=':memory:')
 
     # try giving it some local storage / disk space ?
-    #db_path = '/tmp/database.db'
-    #con = duckdb.connect(database=db_path)
+    db_path = '/tmp/database.db'
+    con = duckdb.connect(database=db_path)
 
     query = f"SET memory_limit='{memory}GB'"
     logger.info(f"query={query}")
