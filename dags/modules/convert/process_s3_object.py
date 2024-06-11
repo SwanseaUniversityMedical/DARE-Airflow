@@ -58,7 +58,7 @@ def process_s3_object(bucket, key, etag, action):
                             ingest_delete=False,
                             duckdb_params=duckdb_params,
                             action=action,
-                            debug=False,
+                            debug=True,
                             tracking=tracking_str)
     else:
         logging.info("Instructions to NOT load")
