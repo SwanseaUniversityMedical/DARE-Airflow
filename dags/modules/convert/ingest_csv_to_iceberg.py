@@ -224,7 +224,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         # Use DUCKDB, download, convert upload
         temp_dir = "/home/airflow/"
 
-        print(f'Downloading object from S3 from {ingest_bucket} --> {ingest_key}')
+        print(f'Downloading object from S3 from {ingest_bucket} : {ingest_key}')
         down_dest=temp_dir+ingest_file
         s3_download_minio("s3_conn", bucket_name=ingest_bucket, object_name=ingest_key.replace("+"," "), local_file_path=down_dest)
 
@@ -280,8 +280,8 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         tracking_timer(p_conn, etag, "e_upload",x)
 
         # remove local files
-        os.remove(down_dest)
-        os.remove(down_dest+'.parquet')
+    #    os.remove(down_dest)
+    #    os.remove(down_dest+'.parquet')
 
         send_message_to_rabbitmq('rabbitmq_conn',constants.rabbitmq_exchange_notify, constants.rabbitmq_exchange_notify_key_s3file,
                                  {"dataset":dataset,"version":version,"label":label,"dated":formatted_date,

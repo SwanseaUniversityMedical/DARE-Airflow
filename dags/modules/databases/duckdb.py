@@ -51,15 +51,13 @@ def file_csv_to_parquet(src_file: str, dest_file: str, duckdb_params: str, memor
     
     con = duckdb.connect(database=':memory:')
 
-    # try giving it some disk space ?
+    # try giving it some local storage / disk space ?
     #db_path = '/tmp/database.db'
     #con = duckdb.connect(database=db_path)
 
     query = f"SET memory_limit='{memory}GB'"
     logger.info(f"query={query}")
     con.execute(query)
-
-# header=false,
 
     query = f"COPY (SELECT * FROM read_csv_auto('{src_file}', {duckdb_params})) " \
             f"TO '{dest_file}' " \
