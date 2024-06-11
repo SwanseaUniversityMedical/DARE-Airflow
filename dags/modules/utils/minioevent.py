@@ -16,7 +16,8 @@ def decode_minio_event(bucket, key, etag):
   
     src_file_path: str = key.replace('%2F', '/')
     paths = src_file_path.split("/")
-    file_name = src_file_path.replace(".csv", "")
+    extension = src_file_path.split("/")[-1].split(".")[1]
+    file_name = src_file_path.replace(extension, "")
     dir_name = paths[0]
     full_file_path = key
     head_path = '/'.join(full_file_path.split('/')[:-1])
@@ -32,6 +33,7 @@ def decode_minio_event(bucket, key, etag):
         bucket=bucket,
         src_file_path=src_file_path,
         etag=etag,
+        extension=extension,
         file_name=file_name,
         dir_name=dir_name,
         full_file_path=full_file_path,

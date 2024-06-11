@@ -25,7 +25,7 @@ def process_s3_object(bucket, key, etag, action):
     if defaultUsed:
         attribs, templates, duckdb_params, process, action, defaultUsed = get_instructions(f"BUCKET-{bucket}")
 
-    logging.info(f'default uwsed = {defaultUsed}')
+    logging.info(f'default used = {defaultUsed}')
     logging.info(f'attributes = {attribs}')
     logging.info(f'templates = {templates}')
     logging.info(f'process = {process}')
