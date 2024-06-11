@@ -13,7 +13,7 @@ from modules.providers.operators.rabbitmq import RabbitMQPythonOperator
 from modules.utils.minioevent import unpack_minio_event
 
 with DAG(
-    dag_id="register_minio_objects",
+    dag_id="DLM_register_minio_objects",
     schedule="@once",
     start_date=pendulum.datetime(1900, 1, 1, tz="UTC"),
     catchup=True,

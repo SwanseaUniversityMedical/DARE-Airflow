@@ -22,7 +22,7 @@ from modules.utils.minioevent import unpack_minio_event
 
 
 with DAG(
-    dag_id="ingest_loading_bay",
+    dag_id="DLM_loading_bay",
     schedule="@once",
     start_date=pendulum.datetime(1900, 1, 1, tz="UTC"),
     catchup=True,
