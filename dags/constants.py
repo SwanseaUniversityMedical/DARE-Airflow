@@ -1,22 +1,21 @@
-rabbitmq_queue_minio_event='afload'
-rabbitmq_queue_object_event='afobjectload'
-rabbitmq_queue_minio_register='afregister'
+rabbitmq_queue_minio_event = 'afload'
+rabbitmq_queue_object_event = 'afobjectload'
+rabbitmq_queue_minio_register = 'afregister'
 
-rabbitmq_exchange_load='load'
-rabbitmq_exchange_load_key_s3file='s3'
+rabbitmq_exchange_load = 'load'
+rabbitmq_exchange_load_key_s3file = 's3'
 
-rabbitmq_exchange_notify='notify'
-rabbitmq_exchange_notify_key_s3file='s3'
-rabbitmq_exchange_notify_key_trino='hive'
-rabbitmq_exchange_notify_key_trino_iceberg='iceberg'
+rabbitmq_exchange_notify = 'notify'
+rabbitmq_exchange_notify_key_s3file = 's3'
+rabbitmq_exchange_notify_key_trino = 'hive'
+rabbitmq_exchange_notify_key_trino_iceberg = 'iceberg'
 
 redis_expiry = 30
 
 assets3_url = 'https://cat-hdp.demo.ukserp.ac.uk/doc/GetFilteredData2?profile=dlm&Filter=%22Dataset='
 
-
-process_s3_option_default   = "default"
-process_s3_option_load   = "load"
+process_s3_option_default = "default"
+process_s3_option_load = "load"
 process_s3_option_manual = "manual"
 process_s3_option_whatif = "whatif"
 
@@ -24,23 +23,23 @@ process_s3_formoption_yesauto = "yesAlways"
 process_s3_formoption_yesmanual = "yesManual"
 process_s3_formoption_no = "no"
 
-sql_trackingtable='''               
+sql_trackingtable = '''
 CREATE TABLE IF NOT EXISTS trackingtable (
-            id VARCHAR(150), 
-            dataset VARCHAR(150), 
-            version VARCHAR(150), 
-            label VARCHAR(150), 
+            id VARCHAR(150),
+            dataset VARCHAR(150),
+            version VARCHAR(150),
+            label VARCHAR(150),
             dated timestamp,
             bucket VARCHAR(150),
-            key VARCHAR(350), 
-            tablename VARCHAR(150), 
+            key VARCHAR(350),
+            tablename VARCHAR(150),
             physical VARCHAR(200)
         );
         '''
 
-sql_tracking='''                
+sql_tracking = '''
 CREATE TABLE IF NOT EXISTS tracking (
-id VARCHAR(350), 
+id VARCHAR(350),
 bucket VARCHAR(100),
 path VARCHAR(500),
 s_marker timestamp,

@@ -1,12 +1,16 @@
-
-import dags.constants
 from dags.modules.databases.duckdb import file_csv_to_parquet
-from dags.modules.databases.trino import create_schema, drop_table, get_trino_conn_details, get_trino_engine, hive_create_table_from_parquet, iceberg_create_table_from_hive, validate_identifier, validate_s3_key, get_table_schema_and_max_values
+from dags.modules.databases.trino import create_schema, drop_table, \
+    get_trino_conn_details, get_trino_engine, hive_create_table_from_parquet, \
+    iceberg_create_table_from_hive, validate_identifier, validate_s3_key, \
+    get_table_schema_and_max_values
 from dags.modules.utils.rabbit import send_message_to_rabbitmq
-from dags.modules.utils.s3 import s3_create_bucket, s3_delete, s3_download_minio, s3_upload
-from dags.modules.utils.tracking_timer import tracking_timer,  tracking_data, tracking_data_str
+from dags.modules.utils.s3 import s3_create_bucket, s3_delete, \
+    s3_download_minio, s3_upload
+from dags.modules.utils.tracking_timer import tracking_timer, tracking_data, \
+    tracking_data_str
+from dags.modules.convert.pyarrow_to_trino_schema import pyarrow_to_trino_schema
 
-import constants
+import dags.constants as constants
 import psycopg2
 import pyarrow.parquet as pq
 import json
@@ -22,13 +26,13 @@ import codecs
 import chardet
 import hashlib
 from airflow.hooks.base import BaseHook
-from dags.modules.convert.pyarrow_to_trino_schema import pyarrow_to_trino_schema
-from dags.modules.utils.tracking_timer import tracking_timer
+
 
 def sha1(value):
     sha_1 = hashlib.sha1()
     sha_1.update(str(value).encode('utf-8'))
     return sha_1.hexdigest()
+
 
 def is_utf8(data):
     result = chardet.detect(data)
@@ -59,8 +63,10 @@ def validate_sed_expression(expression):
         logging.info("Invalid sed expression")
         return False
 
-def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucket, ingest_key, dag_id, ingest_delete, duckdb_params, action, debug, tracking):
 
+def ingest_csv_to_iceberg(dataset, tablename, version, label, etag,
+                          ingest_bucket, ingest_key, dag_id, ingest_delete,
+                          duckdb_params, action, debug, tracking):
     ########################################################################
     # Key settings
 
@@ -70,7 +76,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
     base_layer_bucket = "working"
     base_layer_bucket_dataset_specific = True
 
-    append_GUID = False
+    append_guid = False
 
     # dataset is first folder
     if dataset == '':
@@ -97,7 +103,6 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         port=postgres_conn.port
     )
 
-
     ########################################################################
 
     logging.info("Validate inputs...")
@@ -110,9 +115,9 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
     # ingest_key = conf.get("ingest_key", None)
     logging.info(f"ingest_key={ingest_key}")
     assert (
-        (ingest_key is not None) and
-        isinstance(ingest_key, str) and
-        ingest_key.endswith(".csv")
+            (ingest_key is not None) and
+            isinstance(ingest_key, str) and
+            ingest_key.endswith(".csv")
     )
 
     ingest_path = os.path.dirname(ingest_key)
@@ -137,16 +142,20 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         "delete": ingest_delete,
     }
     logging.info(f"ingest={ingest}")
-    #ti.xcom_push("ingest", ingest)
+    # ti.xcom_push("ingest", ingest)
 
     # create tracking entry
     with p_conn.cursor() as cur:
-        sql = f"INSERT INTO tracking (id, dataset, version, label, s_marker, bucket, path) SELECT '{etag}','{dataset}','{version}','{label}', NOW(), '{ingest_bucket}', '{ingest_key}' WHERE NOT EXISTS (SELECT 1 FROM tracking WHERE id = '{etag}' )"
+        sql = f"""
+        INSERT INTO tracking (id, dataset, version, label, s_marker, bucket, path)
+        SELECT '{etag}','{dataset}','{version}','{label}', NOW(), '{ingest_bucket}', '{ingest_key}'
+        WHERE NOT EXISTS (SELECT 1 FROM tracking WHERE id = '{etag}' )
+        """
         cur.execute(sql)
     p_conn.commit()
     x2 = time.time()
 
-    tracking_data_str(p_conn,etag,'params', tracking)
+    tracking_data_str(p_conn, etag, 'params', tracking)
 
     hive_schema = load_layer_schema
     hive_table = validate_identifier(f"{hive_schema}.{dataset}_{dag_id}")
@@ -165,19 +174,19 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         "path": hive_path,
     }
     logging.info(f"hive={hive}")
-    #ti.xcom_push("hive", hive)
+    # ti.xcom_push("hive", hive)
 
     iceberg_schema = f"iceberg.{dataset}"  # "iceberg.ingest"
 
     tablename_ext = ""
 
-    #if version:
+    # if version:
     #    tablename_ext = tablename_ext + f"_{version}"
-    if append_GUID:
+    if append_guid:
         tablename_ext = tablename_ext + f"_{dag_id}"
-    tempTabName = f"{iceberg_schema}.{tablename}{tablename_ext}".replace("-","_").replace("+","_").replace(" ","_")
-    logging.info(f"proposed iceberg name = {tempTabName}")
-    iceberg_table = validate_identifier(tempTabName)
+    temp_tab_name = f"{iceberg_schema}.{tablename}{tablename_ext}".replace("-", "_").replace("+", "_").replace(" ", "_")
+    logging.info(f"proposed iceberg name = {temp_tab_name}")
+    iceberg_table = validate_identifier(temp_tab_name)
 
     iceberg_bucket = base_layer_bucket
     iceberg_dir = validate_s3_key(f"{dataset}/{version}")
@@ -185,7 +194,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         iceberg_bucket = dataset
         iceberg_dir = validate_s3_key(f"{version}")
 
-    tablename2 = tablename.replace("-","_").replace("+","_").replace(" ","_")
+    tablename2 = tablename.replace("-", "_").replace("+", "_").replace(" ", "_")
     iceberg_path = validate_s3_key(f"{iceberg_bucket}/{iceberg_dir}/{tablename2}")
 
     iceberg = {
@@ -196,24 +205,24 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         "path": iceberg_path,
     }
     logging.info(f"iceberg={iceberg}")
-    #ti.xcom_push("iceberg", iceberg)
+    # ti.xcom_push("iceberg", iceberg)
 
     # Use streaming ?
-    if False :
+    if False:
         ########################################################################
-        x=tracking_timer(p_conn, etag, "s_par")
+        x = tracking_timer(p_conn, etag, "s_par")
 
         # Use DUCKDB S3 to S3
         logging.info("Convert from ingest bucket CSV to loading bucket Parquet using DuckDB...")
-        s3_csv_to_parquet(
-            conn_id="s3_conn",
-            src_bucket=ingest_bucket,
-            src_key=ingest_key,
-            dst_bucket=hive_bucket,
-            dst_key=hive_key
-        )
+        # s3_csv_to_parquet(
+        #     conn_id="s3_conn",
+        #     src_bucket=ingest_bucket,
+        #     src_key=ingest_key,
+        #     dst_bucket=hive_bucket,
+        #     dst_key=hive_key
+        # )
 
-        tracking_timer(p_conn, etag, "e_par",x)
+        tracking_timer(p_conn, etag, "e_par", x)
 
         ########################################################################
 
@@ -225,67 +234,74 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         temp_dir = "/home/airflow/"
 
         print(f'Downloading object from S3 from {ingest_bucket} : {ingest_key}')
-        down_dest=temp_dir+ingest_file
-        s3_download_minio("s3_conn", bucket_name=ingest_bucket, object_name=ingest_key.replace("+"," "), local_file_path=down_dest)
+        down_dest = temp_dir + ingest_file
+        s3_download_minio("s3_conn",
+                          bucket_name=ingest_bucket,
+                          object_name=ingest_key.replace("+", " "),
+                          local_file_path=down_dest)
 
-        tracking_timer(p_conn, etag, "e_download",x)
-        tracking_data(p_conn,etag,'filesize', os.path.getsize(down_dest))
+        tracking_timer(p_conn, etag, "e_download", x)
+        tracking_data(p_conn, etag, 'filesize', os.path.getsize(down_dest))
 
-########################################
-#temp manual SED
+        ########################################
+        # temp manual SED
         logging.info("Running SED")
-        sed_expression = F"1s/[-' ''('')'':']//g"
-        sed_command = F"sed -i '{sed_expression}' {down_dest}" 
+        sed_expression = "1s/[-' ''('')'':']//g"
+        sed_command = F"sed -i '{sed_expression}' {down_dest}"
         if validate_sed_expression(sed_expression):
             subprocess.run(sed_command, shell=True)
 
-########################################
+        ########################################
 
-
-        x=tracking_timer(p_conn, etag, "s_convert")
+        x = tracking_timer(p_conn, etag, "s_convert")
 
         # DUCKDB needs UTF-8 files, so check
-        #with open(down_dest, 'rb') as file:
+        # with open(down_dest, 'rb') as file:
         #    in_data = file.read()
 
         # Check if file is UTF-8 encoded
         print("Testing if file is UTF-8 encoded")
-        with open(down_dest, 'rb') as file:
-            testdata = file.read(5000)
-            #if is_utf8(testdata):
+        with open(down_dest, 'rb'):
+            # testdata = file.read(5000)
+            # if is_utf8(testdata):
             # removed for now as does not work - so always run - this needs to be sorted as waste of energy
             if False:
                 print("File is already UTF-8 encoded. No conversion needed.")
             else:
                 print("File is not UTF-8 encoded. Converting to UTF-8...")
-                down_dest2 = down_dest.replace(temp_dir,temp_dir+'c-')
+                down_dest2 = down_dest.replace(temp_dir, temp_dir + 'c-')
                 convert_to_utf8(down_dest, down_dest2)
                 os.remove(down_dest)
                 down_dest = down_dest2
                 print("Conversion complete. New file created:", down_dest)
 
-        tracking_timer(p_conn, etag, "e_convert",x)
-        x=tracking_timer(p_conn, etag, "s_par")
+        tracking_timer(p_conn, etag, "e_convert", x)
+        x = tracking_timer(p_conn, etag, "s_par")
 
         print(f"DUCKDB convert to parquet of file {down_dest}")
-        file_csv_to_parquet(src_file=down_dest, dest_file=down_dest+'.parquet', duckdb_params=duckdb_params )
+        file_csv_to_parquet(src_file=down_dest,
+                            dest_file=down_dest + '.parquet',
+                            duckdb_params=duckdb_params)
 
-        tracking_timer(p_conn, etag, "e_par",x)
-        tracking_data(p_conn,etag,'filesize_par', os.path.getsize(down_dest+'.parquet'))
-        x=tracking_timer(p_conn, etag, "s_upload")
+        tracking_timer(p_conn, etag, "e_par", x)
+        tracking_data(p_conn, etag, 'filesize_par', os.path.getsize(down_dest + '.parquet'))
+        x = tracking_timer(p_conn, etag, "s_upload")
 
         print(f"Uploading to S3 {hive_bucket} - {hive_key}")
-        s3_upload("s3_conn",down_dest+'.parquet',hive_bucket,hive_key)
+        s3_upload("s3_conn", down_dest + '.parquet', hive_bucket, hive_key)
 
-        tracking_timer(p_conn, etag, "e_upload",x)
+        tracking_timer(p_conn, etag, "e_upload", x)
 
         # remove local files
-    #    os.remove(down_dest)
-    #    os.remove(down_dest+'.parquet')
+        #    os.remove(down_dest)
+        #    os.remove(down_dest+'.parquet')
 
-        send_message_to_rabbitmq('rabbitmq_conn',constants.rabbitmq_exchange_notify, constants.rabbitmq_exchange_notify_key_s3file,
-                                 {"dataset":dataset,"version":version,"label":label,"dated":formatted_date,
-                                  "s3bucket": hive_bucket, "s3key":hive_key})
+        send_message_to_rabbitmq('rabbitmq_conn',
+                                 constants.rabbitmq_exchange_notify,
+                                 constants.rabbitmq_exchange_notify_key_s3file,
+                                 {"dataset": dataset, "version": version,
+                                  "label": label, "dated": formatted_date,
+                                  "s3bucket": hive_bucket, "s3key": hive_key})
 
     ########################################################################
 
@@ -294,7 +310,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
 
     ########################################################################
 
-    x=tracking_timer(p_conn, etag, "s_schema")
+    x = tracking_timer(p_conn, etag, "s_schema")
 
     logging.info("Getting schema from the new PAR file")
     s3_conn = json.loads(BaseHook.get_connection("s3_conn").get_extra())
@@ -311,13 +327,13 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
     trino_schema = pyarrow_to_trino_schema(schema)
     # logging.info(f"trino schema={trino_schema}")
 
-    tracking_data(p_conn, etag, "columns",str(len(trino_schema)))
-    tracking_timer(p_conn, etag, "e_schema",x)
+    tracking_data(p_conn, etag, "columns", str(len(trino_schema)))
+    tracking_timer(p_conn, etag, "e_schema", x)
 
     ########################################################################
 
     logging.info("Mounting PAR on s3 into Hive connector and copy to Iceberg...")
-    x=tracking_timer(p_conn, etag, "s_hive")
+    x = tracking_timer(p_conn, etag, "s_hive")
 
     # Create a connection to Trino
     trino_conn = get_trino_conn_details()
@@ -338,18 +354,22 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
             schema=trino_schema
         )
 
-        tracking_timer(p_conn, etag, "e_schema",x)
-        tracking_data_str(p_conn,etag,'schema_hive', hive_schema)
-        tracking_data_str(p_conn,etag,'tablename_hive', hive_table)
-        tracking_data_str(p_conn,etag,'location_hive', hive_path)
+        tracking_timer(p_conn, etag, "e_schema", x)
+        tracking_data_str(p_conn, etag, 'schema_hive', hive_schema)
+        tracking_data_str(p_conn, etag, 'tablename_hive', hive_table)
+        tracking_data_str(p_conn, etag, 'location_hive', hive_path)
 
-        send_message_to_rabbitmq('rabbitmq_conn',constants.rabbitmq_exchange_notify, constants.rabbitmq_exchange_notify_key_trino,
-                                 {"dataset":dataset,"version":version,"label":label,"dated":formatted_date,
-                                  "s3location":hive_path, "dbtable": hive_table})
+        send_message_to_rabbitmq('rabbitmq_conn',
+                                 constants.rabbitmq_exchange_notify,
+                                 constants.rabbitmq_exchange_notify_key_trino,
+                                 {"dataset": dataset, "version": version,
+                                  "label": label, "dated": formatted_date,
+                                  "s3location": hive_path,
+                                  "dbtable": hive_table})
         # "schema":schema  can not be json serialised, so need to sort that ???
 
-        x=tracking_timer(p_conn, etag, "s_iceberg")
-   
+        x = tracking_timer(p_conn, etag, "s_iceberg")
+
         logging.info("Create table in Iceberg connector...")
         iceberg_create_table_from_hive(
             trino,
@@ -360,18 +380,21 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
             action=action
         )
 
-        tracking_timer(p_conn, etag, "e_iceberg",x)
-        tracking_data_str(p_conn,etag,'schema_ice', iceberg_schema)
-        tracking_data_str(p_conn,etag,'tablename_ice', iceberg_table)
-        tracking_data_str(p_conn,etag,'location_ice', iceberg_path)
+        tracking_timer(p_conn, etag, "e_iceberg", x)
+        tracking_data_str(p_conn, etag, 'schema_ice', iceberg_schema)
+        tracking_data_str(p_conn, etag, 'tablename_ice', iceberg_table)
+        tracking_data_str(p_conn, etag, 'location_ice', iceberg_path)
 
-        send_message_to_rabbitmq('rabbitmq_conn',constants.rabbitmq_exchange_notify, constants.rabbitmq_exchange_notify_key_trino_iceberg,
-                                 {"dataset":dataset,"version":version,"label":label,"dated":formatted_date,
-                                  "s3location":iceberg_path, "dbtable": iceberg_table})
+        send_message_to_rabbitmq('rabbitmq_conn',
+                                 constants.rabbitmq_exchange_notify,
+                                 constants.rabbitmq_exchange_notify_key_trino_iceberg,
+                                 {"dataset": dataset, "version": version,
+                                  "label": label, "dated": formatted_date,
+                                  "s3location": iceberg_path,
+                                  "dbtable": iceberg_table})
 
-        
         # iceberg_table.replace(iceberg_schema+'.',"")
-        test = get_table_schema_and_max_values(trino,iceberg_table)
+        test = get_table_schema_and_max_values(trino, iceberg_table)
         logging.info("*****SIMON - temp print schema for schema compare")
         logging.info(test)
 
@@ -385,23 +408,31 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
             logging.info("Cleanup data from Hive connector in s3...")
             # External location data is not cascade deleted on drop table
             # SIMON: removed as drop table will remove from S3
-            #s3_delete(
+            # s3_delete(
             #    conn_id="s3_conn",
             #    bucket=hive_bucket,
             #    key=hive_key
-            #)
+            # )
 
     with p_conn.cursor() as cur:
-        sql = f"INSERT INTO trackingtable (id, dataset,version,label,dated,bucket,key) SELECT '{etag}','{dataset}','{version}','{label}', NOW(), '{ingest_bucket}', '{ingest_key}' WHERE NOT EXISTS (SELECT 1 FROM trackingtable WHERE id = '{etag}' )"
+        sql = f"""
+        INSERT INTO trackingtable (id, dataset,version,label,dated,bucket,key)
+        SELECT '{etag}','{dataset}','{version}','{label}', NOW(), '{ingest_bucket}', '{ingest_key}'
+        WHERE NOT EXISTS (SELECT 1 FROM trackingtable WHERE id = '{etag}')
+        """
         print(sql)
         cur.execute(sql)
-        sql = f"UPDATE trackingtable set tablename = '{iceberg_table}', physical = '{iceberg_path}' where id = '{etag}'"
+        sql = f"""
+        UPDATE trackingtable
+        SET tablename = '{iceberg_table}', physical = '{iceberg_path}'
+        WHERE id = '{etag}'
+        """
         print(sql)
         cur.execute(sql)
     p_conn.commit()
 
     ########################################################################
     # close postgres connection
-    tracking_timer(p_conn, etag, "e_marker",x2)
+    tracking_timer(p_conn, etag, "e_marker", x2)
 
     p_conn.close()

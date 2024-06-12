@@ -13,7 +13,6 @@ def unpack_minio_event(message):
 
 
 def decode_minio_event(bucket, key, etag):
-  
     src_file_path: str = key.replace('%2F', '/')
     paths = src_file_path.split("/")
     extension = src_file_path.split("/")[-1].split(".")[1].lower()
@@ -23,11 +22,11 @@ def decode_minio_event(bucket, key, etag):
     head_path = '/'.join(full_file_path.split('/')[:-1])
     filename = src_file_path.split("/")[-1].split(".")[0]
 
-    version ='1'
+    version = '1'
     if len(paths) > 2:
         version = paths[-2]
 
-    version = version.replace("-","_").replace("/","_")
+    version = version.replace("-", "_").replace("/", "_")
 
     return dict(
         bucket=bucket,

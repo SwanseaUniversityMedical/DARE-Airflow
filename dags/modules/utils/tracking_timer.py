@@ -1,31 +1,44 @@
 import time
 
 
-def tracking_timer(p_conn, etag, variablename, tstart=time.time()):
-
-    if str(variablename).startswith('s'):
+def tracking_timer(p_conn, etag, variable_name, tstart=time.time()):
+    if str(variable_name).startswith('s'):
         diff = 0
-        whichmarker = str(variablename).replace('s_','d_')
+        which_marker = str(variable_name).replace('s_', 'd_')
     else:
         enddiff = time.time()
-        diff =  enddiff - tstart
-        whichmarker = str(variablename).replace('e_','d_')
+        diff = enddiff - tstart
+        which_marker = str(variable_name).replace('e_', 'd_')
 
     with p_conn.cursor() as cur:
-        sql = f"UPDATE tracking SET {variablename}=NOW(), {whichmarker}={diff} WHERE id = '{etag}' "
+        sql = f"""
+        UPDATE tracking
+        SET {variable_name}=NOW(), {which_marker}={diff}
+        WHERE id = '{etag}'
+        """
         cur.execute(sql)
     p_conn.commit()
     return time.time()
 
-def tracking_data(p_conn, etag, variablename, data):
+
+def tracking_data(p_conn, etag, variable_name, data):
     with p_conn.cursor() as cur:
-            sql = f"UPDATE tracking SET {variablename}={data} WHERE id = '{etag}' "
-            cur.execute(sql)
+        sql = f"""
+        UPDATE tracking
+        SET {variable_name}={data}
+        WHERE id = '{etag}'
+        """
+        cur.execute(sql)
     p_conn.commit()
 
-def tracking_data_str(p_conn, etag, variablename, data):
+
+def tracking_data_str(p_conn, etag, variable_name, data):
     with p_conn.cursor() as cur:
-            sql = f"UPDATE tracking SET {variablename}='{data}' WHERE id = '{etag}' "
-            print(sql)
-            cur.execute(sql)
+        sql = f"""
+        UPDATE tracking
+        SET {variable_name}='{data}'
+        WHERE id = '{etag}'
+        """
+        print(sql)
+        cur.execute(sql)
     p_conn.commit()
