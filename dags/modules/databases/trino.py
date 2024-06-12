@@ -3,17 +3,20 @@ import sqlalchemy.engine
 
 from ..utils.s3 import validate_s3_key
 from ..utils.sql import validate_column, validate_identifier
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger(__name__)
 
-from sqlalchemy import create_engine, text
-from sqlalchemy.exc import SQLAlchemyError
 
 def get_trino_conn_details(conn_name: str = 'trino_conn') -> dict:
-    """Gets trino connection info from Airflow connection with connection id that is provided by the user.
+    """Gets trino connection info from Airflow connection with connection
+    id that is provided by the user.
 
-    :param conn_name: A String for the name of the airflow connection for trino. Defaults to "trino_conn".
-    :return: The credential information for the S3 connection that is needed to use Boto3 to connect.
+    :param conn_name: A String for the name of the airflow connection for
+                      trino. Defaults to "trino_conn".
+    :return: The credential information for the S3 connection that is
+             needed to use Boto3 to connect.
     :rtype: dict
     """
     from airflow.hooks.base import BaseHook
@@ -26,7 +29,8 @@ def get_trino_conn_details(conn_name: str = 'trino_conn') -> dict:
     except AirflowNotFoundException as e:
         logger.critical(f"There is no Airflow connection configured with the name '{conn_name}'.")
         raise e
-    # Transform connection object into dictionary to make it easier to share between modules
+    # Transform connection object into dictionary
+    # to make it easier to share between modules
     trino_conn = {"host": conn.host, "port": conn.port, "username": conn.login,
                   "password": conn.password, "database": conn.schema}
 
@@ -37,7 +41,6 @@ def get_trino_engine(trino_conn_details: dict) -> sqlalchemy.engine.Engine:
     """Creates a sqlalchemy engine for talking to trino.
     :param trino_conn_details: dict of information for connecting to trino database
     :return engine: sqlalchemy engine object
-
     """
     from sqlalchemy import create_engine
     import warnings
@@ -124,31 +127,34 @@ def hive_create_table_from_parquet(trino: sqlalchemy.engine.Engine, table: str, 
     trino.execute(query)
 
 
-def iceberg_create_table_from_hive(trino: sqlalchemy.engine.Engine, schema : str,  table: str, hive_table: str, location: str, action: str):
-
+def iceberg_create_table_from_hive(trino: sqlalchemy.engine.Engine, schema: str,
+                                   table: str, hive_table: str,
+                                   location: str, action: str):
     create = True
 
     if action == "replace":
-        logging.info(f"Droping table {validate_identifier(table)} if exists")
-        drop_querry = f"DROP TABLE IF EXISTS {validate_identifier(table)}"
-        trino.execute(drop_querry)
+        logging.info(f"Dropping table {validate_identifier(table)} if exists")
+        drop_query = f"DROP TABLE IF EXISTS {validate_identifier(table)}"
+        trino.execute(drop_query)
 
     if action == "append":
         # does table already exist
-        justTableName = table.replace(schema+'.','')
-        tableexists_querry = f"show tables from {schema} like '{justTableName}'"
-        table_exists = trino.execute(tableexists_querry)
-        whichTables = table_exists.fetchall()
-        if len(whichTables) > 0:
-            # yes table exists, if does not then just let the process below create it
+        just_table_name = table.replace(schema + '.', '')
+        table_exists_query = f"show tables from {schema} like '{just_table_name}'"
+        table_exists = trino.execute(table_exists_query)
+        which_tables = table_exists.fetchall()
+        if len(which_tables) > 0:
+            # yes table exists, if does not then create it
             logging.info(f"Appending to {validate_identifier(table)}")
             create = False
-            append_querry = f"INSERT INTO {validate_identifier(table)} SELECT * FROM {validate_identifier(hive_table)}"
-            trino.execute(append_querry)
-
+            append_query = f"""
+            INSERT INTO {validate_identifier(table)}
+            SELECT * FROM {validate_identifier(hive_table)}
+            """
+            trino.execute(append_query)
 
     if create:
-        logging.info(f"Creating table {validate_identifier(table)}, so long as it does not already exist")
+        logging.info(f"Creating table {validate_identifier(table)}, provided it does not already exist")
         query = f"CREATE TABLE IF NOT EXISTS " \
                 f"{validate_identifier(table)} " \
                 f" WITH (" \
@@ -164,34 +170,36 @@ def drop_table(trino: sqlalchemy.engine.Engine, table: str):
             f"{validate_identifier(table)}"
     trino.execute(query)
 
+
 def get_schema(engine, table_name):
-        query = f"SHOW COLUMNS FROM {table_name}"
-        try:
-            result = engine.execute(text(query))
-            schema = {row['Column']: row['Type'] for row in result}
-            return schema
-        except SQLAlchemyError as e:
-            print(f"Error executing query: {e}")
-            return None
+    query = f"SHOW COLUMNS FROM {table_name}"
+    try:
+        result = engine.execute(text(query))
+        schema = {row['Column']: row['Type'] for row in result}
+        return schema
+    except SQLAlchemyError as e:
+        print(f"Error executing query: {e}")
+        return None
+
 
 def get_max_values(engine, table_name, schema):
-        max_values = {}
-        for column in schema.keys():
-            query = f"SELECT MAX({column}) as max_value FROM {table_name}"
-            if schema[column] == "varchar":
-                query = f"SELECT MAX(length({column})) as max_length FROM {table_name}"
-            try:
-                result = engine.execute(text(query)).scalar()
-                max_values[column] = result
-            except SQLAlchemyError as e:
-                print(f"Error executing query: {e}")
-                max_values[column] = None
-        return max_values
+    max_values = {}
+    for column in schema.keys():
+        query = f"SELECT MAX({column}) as max_value FROM {table_name}"
+        if schema[column] == "varchar":
+            query = f"SELECT MAX(length({column})) as max_length FROM {table_name}"
+        try:
+            result = engine.execute(text(query)).scalar()
+            max_values[column] = result
+        except SQLAlchemyError as e:
+            print(f"Error executing query: {e}")
+            max_values[column] = None
+    return max_values
 
-def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name ):
-   
+
+def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name):
     # Reflect the table from the database
-    schema = get_schema(trino,table_name)
+    schema = get_schema(trino, table_name)
 
     max_values = get_max_values(trino, table_name, schema)
 

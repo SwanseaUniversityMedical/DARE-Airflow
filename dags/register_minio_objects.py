@@ -44,10 +44,13 @@ with DAG(
             port=postgres_conn.port
         )
         cur = conn.cursor()
-        
+
         logging.info(f"register adding eTag = {etag}")
 
-        sql = f"INSERT INTO register (etag) SELECT '{etag}'  WHERE NOT EXISTS (SELECT 1 FROM register WHERE etag = '{etag}' )"
+        sql = f"""
+        INSERT INTO register (etag)
+        SELECT '{etag}'
+        WHERE NOT EXISTS (SELECT 1 FROM register WHERE etag = '{etag}' )"""
         cur.execute(sql)
         conn.commit()
         cur.close()

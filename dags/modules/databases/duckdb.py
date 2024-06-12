@@ -9,8 +9,8 @@ from ..utils.s3 import validate_s3_key
 logger = logging.getLogger(__name__)
 
 
-def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: str, dst_key: str, memory: int = 40):
-
+def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str,
+                      src_key: str, dst_key: str, memory: int = 40):
     assert src_key.lower().endswith(".csv")
     assert dst_key.lower().endswith(".parquet")
     assert validate_s3_key(os.path.dirname(src_key))
@@ -47,9 +47,9 @@ def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: s
     con.execute(query)
 
 
-def file_csv_to_parquet(src_file: str, dest_file: str, duckdb_params: str, memory: int = 40):
-    
-    #con = duckdb.connect(database=':memory:')
+def file_csv_to_parquet(src_file: str, dest_file: str,
+                        duckdb_params: str, memory: int = 40):
+    # con = duckdb.connect(database=':memory:')
 
     # try giving it some local storage / disk space ?
     db_path = '/tmp/database.db'
@@ -59,7 +59,7 @@ def file_csv_to_parquet(src_file: str, dest_file: str, duckdb_params: str, memor
     logger.info(f"query={query}")
     con.execute(query)
 
-    query = f"COPY (SELECT * FROM read_csv_auto('{src_file}', {duckdb_params})) " \
+    query = f"COPY (SELECT * FROM read_csv_auto('{src_file}', {duckdb_params}))" \
             f"TO '{dest_file}' " \
             f"(FORMAT PARQUET, CODEC 'SNAPPY', ROW_GROUP_SIZE 100000);"
     logger.info(f"query={query}")

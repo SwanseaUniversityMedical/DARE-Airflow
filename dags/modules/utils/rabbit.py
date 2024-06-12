@@ -2,6 +2,7 @@ import pika
 import json
 from airflow.hooks.base_hook import BaseHook
 
+
 def send_message_to_rabbitmq(rabbit_connection, exchange, routing_key, message):
     # Get RabbitMQ connection details from Airflow connection
     connection = BaseHook.get_connection(rabbit_connection)
