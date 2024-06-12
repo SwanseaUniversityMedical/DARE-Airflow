@@ -1,10 +1,9 @@
-import dags.constants
+import dags.constants as constants
 from dags.modules.utils.version import AttributeSearch
 import requests
 import logging
 import json
 import redis
-import constants
 from airflow.hooks.base import BaseHook
 
 

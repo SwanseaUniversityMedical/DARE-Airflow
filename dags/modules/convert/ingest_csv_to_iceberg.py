@@ -1,4 +1,3 @@
-import dags.constants
 from dags.modules.databases.duckdb import file_csv_to_parquet
 from dags.modules.databases.trino import create_schema, drop_table, \
     get_trino_conn_details, get_trino_engine, hive_create_table_from_parquet, \
@@ -11,7 +10,7 @@ from dags.modules.utils.tracking_timer import tracking_timer, tracking_data, \
     tracking_data_str
 from dags.modules.convert.pyarrow_to_trino_schema import pyarrow_to_trino_schema
 
-import constants
+import dags.constants as constants
 import psycopg2
 import pyarrow.parquet as pq
 import json
@@ -215,13 +214,13 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag,
 
         # Use DUCKDB S3 to S3
         logging.info("Convert from ingest bucket CSV to loading bucket Parquet using DuckDB...")
-        s3_csv_to_parquet(
-            conn_id="s3_conn",
-            src_bucket=ingest_bucket,
-            src_key=ingest_key,
-            dst_bucket=hive_bucket,
-            dst_key=hive_key
-        )
+        # s3_csv_to_parquet(
+        #     conn_id="s3_conn",
+        #     src_bucket=ingest_bucket,
+        #     src_key=ingest_key,
+        #     dst_bucket=hive_bucket,
+        #     dst_key=hive_key
+        # )
 
         tracking_timer(p_conn, etag, "e_par", x)
 
@@ -262,7 +261,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag,
 
         # Check if file is UTF-8 encoded
         print("Testing if file is UTF-8 encoded")
-        with open(down_dest, 'rb') as file:
+        with open(down_dest, 'rb'):
             # testdata = file.read(5000)
             # if is_utf8(testdata):
             # removed for now as does not work - so always run - this needs to be sorted as waste of energy
