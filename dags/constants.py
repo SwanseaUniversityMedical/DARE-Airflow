@@ -25,21 +25,21 @@ process_s3_formoption_no = "no"
 
 sql_trackingtable = '''
 CREATE TABLE IF NOT EXISTS trackingtable (
-            id VARCHAR(150), 
-            dataset VARCHAR(150), 
-            version VARCHAR(150), 
-            label VARCHAR(150), 
+            id VARCHAR(150),
+            dataset VARCHAR(150),
+            version VARCHAR(150),
+            label VARCHAR(150),
             dated timestamp,
             bucket VARCHAR(150),
-            key VARCHAR(350), 
-            tablename VARCHAR(150), 
+            key VARCHAR(350),
+            tablename VARCHAR(150),
             physical VARCHAR(200)
         );
         '''
 
 sql_tracking = '''
 CREATE TABLE IF NOT EXISTS tracking (
-id VARCHAR(350), 
+id VARCHAR(350),
 bucket VARCHAR(100),
 path VARCHAR(500),
 s_marker timestamp,
