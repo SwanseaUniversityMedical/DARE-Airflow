@@ -3,3 +3,5 @@
 docker-compose/airflow/logs/**
 .DS_Store
 **/.DS_Store
+
+**/__pycache__
