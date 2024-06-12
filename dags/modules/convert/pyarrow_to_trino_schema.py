@@ -1,5 +1,4 @@
 import logging
-import constants
 
 
 def pyarrow_to_trino_schema(schema):
