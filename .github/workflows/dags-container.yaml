@@ -28,7 +28,7 @@ on:
 
 permissions:
   contents: write
-  pull-requests: read
+  pull-requests: write
   actions: read
 
 concurrency:
@@ -40,7 +40,7 @@ jobs:
   # Job name must be unique across repo to target
   # branch protection rules "required checks" properly!
   dags-container:
-    uses: SwanseaUniversityMedical/workflows/.github/workflows/pr-and-release-container.yaml@v1.7.0-containers
+    uses: SwanseaUniversityMedical/workflows/.github/workflows/pr-and-release-container.yaml@v1.8.1-containers
     with:
       job-name: dags-container
       registry: ${{ vars.HARBOR_REGISTRY }}
