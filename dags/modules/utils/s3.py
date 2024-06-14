@@ -10,6 +10,22 @@ from botocore.config import Config
 
 logger = logging.getLogger(__name__)
 
+def get_conn_details(conn_id) -> dict:
+    """Gets S3 connection info from Airflow connection with given connection id
+
+    :return: The credential information for the S3 connection that is needed to use Boto3 to connect.
+    :rtype: dict
+    """
+    try:
+        conn = BaseHook.get_connection(conn_id)
+        conn_extra = json.loads(BaseHook.get_connection(conn_id).get_extra())
+    except AirflowNotFoundException as e:
+        logger.critical("There is no Airflow connection configured with the name {0}.".format(conn_id))
+        raise e
+    # Transform connection object into dictionary to make it easier to share between modules
+    s3_conn = {"endpoint_url": conn_extra["endpoint_url"], "aws_access_key_id": conn.login, "aws_secret_access_key": conn.password}
+    return s3_conn
+
 def validate_s3_key(key):
     # Validate the s3 key is strictly one or more slash separated keys
     logging.info(f"Validate key: {key}")
@@ -23,7 +39,7 @@ def validate_s3_key(key):
 
 
 def s3_get_resource(conn_id: str):
-    s3_conn = json.loads(BaseHook.get_connection(conn_id).get_extra())
+    s3_conn = get_conn_details(conn_id)
 
     return boto3.resource(
         's3',
@@ -36,7 +52,7 @@ def s3_get_resource(conn_id: str):
 
 def s3_get_fs(conn_id):
 
-    s3_conn = json.loads(BaseHook.get_connection(conn_id).get_extra())
+    s3_conn = get_conn_details(conn_id)
 
     return s3fs.S3FileSystem(
         endpoint_url=s3_conn["endpoint_url"],
@@ -71,9 +87,9 @@ def s3_create_bucket(conn_id: str, bucket):
 
 def s3_download_minio(conn_id, bucket_name, object_name, local_file_path):
 
-    s3_conn = json.loads(BaseHook.get_connection(conn_id).get_extra())
+    s3_conn = get_conn_details(conn_id)
 
-    url = str(s3_conn["endpoint_url"]).replace('http://','')
+    url = str(s3_conn["endpoint_url"]).replace('http://','').replace('https://','')
 
     client = Minio(url,
                access_key=s3_conn["aws_access_key_id"],
@@ -105,7 +121,7 @@ def s3_download_minio(conn_id, bucket_name, object_name, local_file_path):
 
 def s3_download(conn_id, bucket_name, object_name, local_file_path):
 
-    s3_conn = json.loads(BaseHook.get_connection(conn_id).get_extra())
+    s3_conn = get_conn_details(conn_id)
 
     client = boto3.client(
         's3',
@@ -120,7 +136,7 @@ def s3_download(conn_id, bucket_name, object_name, local_file_path):
 
 def s3_upload(conn_id, src_file, bucket, object_name):
 
-    s3_conn = json.loads(BaseHook.get_connection(conn_id).get_extra())
+    s3_conn = get_conn_details(conn_id)
 
     client = boto3.client(
         's3',
