@@ -47,6 +47,7 @@ def get_trino_engine(trino_conn_details: dict) -> sqlalchemy.engine.Engine:
     warnings.filterwarnings('ignore')
 
     username = trino_conn_details['username']
+    password = trino_conn_details['password']
     host = trino_conn_details['host']
     port = trino_conn_details['port']
     database = trino_conn_details['database']
@@ -61,8 +62,9 @@ def get_trino_engine(trino_conn_details: dict) -> sqlalchemy.engine.Engine:
     logger.info(f"database={database}")
 
     engine = create_engine(
-        f"trino://{username}@{host}:{port}/{database}",
+        f"trino://{username}:{password}@{host}:{port}/{database}",
         connect_args={
+            "auth": BasicAuthentication(username, password),
             "http_scheme": connect_protocol,
             # TODO This needs to be set to true when deploying to anything thats not dev
             "verify": False
