@@ -1,3 +1,6 @@
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
+
 import logging
 import sqlalchemy.engine
 
@@ -5,9 +8,6 @@ from ..utils.s3 import validate_s3_key
 from ..utils.sql import validate_column, validate_identifier
 
 logger = logging.getLogger(__name__)
-
-from sqlalchemy import create_engine, text
-from sqlalchemy.exc import SQLAlchemyError
 
 def get_trino_conn_details(conn_name: str = 'trino_conn') -> dict:
     """Gets trino connection info from Airflow connection with connection id that is provided by the user.
@@ -39,7 +39,7 @@ def get_trino_engine(trino_conn_details: dict) -> sqlalchemy.engine.Engine:
     :return engine: sqlalchemy engine object
 
     """
-    from sqlalchemy import create_engine
+    from trino.auth import BasicAuthentication
     import warnings
 
     logger.info("Creating engine to talk to trino")
