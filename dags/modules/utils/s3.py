@@ -58,7 +58,7 @@ def s3_get_fs(conn_id):
         endpoint_url=s3_conn["endpoint_url"],
         key=s3_conn["aws_access_key_id"],
         secret=s3_conn["aws_secret_access_key"],
-        use_ssl=False
+        use_ssl=True
     )
 
 
@@ -94,7 +94,7 @@ def s3_download_minio(conn_id, bucket_name, object_name, local_file_path):
     client = Minio(url,
                access_key=s3_conn["aws_access_key_id"],
                secret_key=s3_conn["aws_secret_access_key"],
-               secure=False)
+               secure=True)
     
     
     #client.fget_object(bucket_name, object_name, local_file_path)
@@ -128,7 +128,7 @@ def s3_download(conn_id, bucket_name, object_name, local_file_path):
         endpoint_url=s3_conn["endpoint_url"],
         aws_access_key_id=s3_conn["aws_access_key_id"],
         aws_secret_access_key=s3_conn["aws_secret_access_key"],
-        use_ssl=False )
+        use_ssl=True )
 
     with open(local_file_path, 'wb') as f:
         client.download_fileobj(bucket_name, object_name, f)
@@ -143,7 +143,7 @@ def s3_upload(conn_id, src_file, bucket, object_name):
         endpoint_url=s3_conn["endpoint_url"],
         aws_access_key_id=s3_conn["aws_access_key_id"],
         aws_secret_access_key=s3_conn["aws_secret_access_key"],
-        use_ssl=False )
+        use_ssl=True )
 
     client.upload_file(src_file,bucket,object_name)
     

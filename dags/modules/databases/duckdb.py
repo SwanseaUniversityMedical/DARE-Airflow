@@ -33,7 +33,7 @@ def s3_csv_to_parquet(conn_id: str, src_bucket: str, dst_bucket: str, src_key: s
             f"SET s3_endpoint='{endpoint}';" \
             f"SET s3_access_key_id='{access_key_id}';" \
             f"SET s3_secret_access_key='{secret_access_key}';" \
-            f"SET s3_use_ssl=False;" \
+            f"SET s3_use_ssl=True;" \
             f"SET preserve_insertion_order=False;" \
             f"SET s3_url_style='path';" \
             f"SET memory_limit='{memory}GB'"

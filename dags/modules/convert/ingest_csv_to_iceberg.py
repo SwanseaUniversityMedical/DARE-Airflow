@@ -303,7 +303,7 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
         endpoint_url=s3_conn["endpoint_url"],
         key=s3_conn["aws_access_key_id"],
         secret=s3_conn["aws_secret_access_key"],
-        use_ssl=False
+        use_ssl=True
     )
 
     with fs.open(F"s3://{hive_bucket}/{hive_key}", "rb") as fp:
