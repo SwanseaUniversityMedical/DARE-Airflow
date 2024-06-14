@@ -50,6 +50,10 @@ def get_trino_engine(trino_conn_details: dict) -> sqlalchemy.engine.Engine:
     host = trino_conn_details['host']
     port = trino_conn_details['port']
     database = trino_conn_details['database']
+    connect_protocol = "http"
+    if port == 443:
+        connect_protocol = "https"
+
 
     logger.info(f"username={username}")
     logger.info(f"host={host}")
@@ -59,7 +63,7 @@ def get_trino_engine(trino_conn_details: dict) -> sqlalchemy.engine.Engine:
     engine = create_engine(
         f"trino://{username}@{host}:{port}/{database}",
         connect_args={
-            "http_scheme": "http",
+            "http_scheme": connect_protocol,
             # TODO This needs to be set to true when deploying to anything thats not dev
             "verify": False
         },
@@ -165,31 +169,30 @@ def drop_table(trino: sqlalchemy.engine.Engine, table: str):
     trino.execute(query)
 
 def get_schema(engine, table_name):
-        query = f"SHOW COLUMNS FROM {table_name}"
-        try:
-            result = engine.execute(text(query))
-            schema = {row['Column']: row['Type'] for row in result}
-            return schema
-        except SQLAlchemyError as e:
-            print(f"Error executing query: {e}")
-            return None
+    query = f"SHOW COLUMNS FROM {table_name}"
+    try:
+        result = engine.execute(text(query))
+        schema = {row['Column']: row['Type'] for row in result}
+        return schema
+    except SQLAlchemyError as e:
+        print(f"Error executing query: {e}")
+        return None
 
 def get_max_values(engine, table_name, schema):
-        max_values = {}
-        for column in schema.keys():
-            query = f"SELECT MAX({column}) as max_value FROM {table_name}"
-            if schema[column] == "varchar":
-                query = f"SELECT MAX(length({column})) as max_length FROM {table_name}"
-            try:
-                result = engine.execute(text(query)).scalar()
-                max_values[column] = result
-            except SQLAlchemyError as e:
-                print(f"Error executing query: {e}")
-                max_values[column] = None
-        return max_values
+    max_values = {}
+    for column in schema.keys():
+        query = f"SELECT MAX({column}) as max_value FROM {table_name}"
+        if schema[column] == "varchar":
+            query = f"SELECT MAX(length({column})) as max_length FROM {table_name}"
+        try:
+            result = engine.execute(text(query)).scalar()
+            max_values[column] = result
+        except SQLAlchemyError as e:
+            print(f"Error executing query: {e}")
+            max_values[column] = None
+    return max_values
 
 def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name ):
-   
     # Reflect the table from the database
     schema = get_schema(trino,table_name)
 
