@@ -1,3 +1,6 @@
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
+
 import logging
 import sqlalchemy.engine
 
@@ -5,9 +8,6 @@ from ..utils.s3 import validate_s3_key
 from ..utils.sql import validate_column, validate_identifier
 
 logger = logging.getLogger(__name__)
-
-from sqlalchemy import create_engine, text
-from sqlalchemy.exc import SQLAlchemyError
 
 def get_trino_conn_details(conn_name: str = 'trino_conn') -> dict:
     """Gets trino connection info from Airflow connection with connection id that is provided by the user.
@@ -39,7 +39,7 @@ def get_trino_engine(trino_conn_details: dict) -> sqlalchemy.engine.Engine:
     :return engine: sqlalchemy engine object
 
     """
-    from sqlalchemy import create_engine
+    from trino.auth import BasicAuthentication
     import warnings
 
     logger.info("Creating engine to talk to trino")
@@ -47,9 +47,14 @@ def get_trino_engine(trino_conn_details: dict) -> sqlalchemy.engine.Engine:
     warnings.filterwarnings('ignore')
 
     username = trino_conn_details['username']
+    password = trino_conn_details['password']
     host = trino_conn_details['host']
     port = trino_conn_details['port']
     database = trino_conn_details['database']
+    connect_protocol = "http"
+    if port == 443:
+        connect_protocol = "https"
+
 
     logger.info(f"username={username}")
     logger.info(f"host={host}")
@@ -57,9 +62,10 @@ def get_trino_engine(trino_conn_details: dict) -> sqlalchemy.engine.Engine:
     logger.info(f"database={database}")
 
     engine = create_engine(
-        f"trino://{username}@{host}:{port}/{database}",
+        f"trino://{username}:{password}@{host}:{port}/{database}",
         connect_args={
-            "http_scheme": "http",
+            "auth": BasicAuthentication(username, password),
+            "http_scheme": connect_protocol,
             # TODO This needs to be set to true when deploying to anything thats not dev
             "verify": False
         },
@@ -165,31 +171,30 @@ def drop_table(trino: sqlalchemy.engine.Engine, table: str):
     trino.execute(query)
 
 def get_schema(engine, table_name):
-        query = f"SHOW COLUMNS FROM {table_name}"
-        try:
-            result = engine.execute(text(query))
-            schema = {row['Column']: row['Type'] for row in result}
-            return schema
-        except SQLAlchemyError as e:
-            print(f"Error executing query: {e}")
-            return None
+    query = f"SHOW COLUMNS FROM {table_name}"
+    try:
+        result = engine.execute(text(query))
+        schema = {row['Column']: row['Type'] for row in result}
+        return schema
+    except SQLAlchemyError as e:
+        print(f"Error executing query: {e}")
+        return None
 
 def get_max_values(engine, table_name, schema):
-        max_values = {}
-        for column in schema.keys():
-            query = f"SELECT MAX({column}) as max_value FROM {table_name}"
-            if schema[column] == "varchar":
-                query = f"SELECT MAX(length({column})) as max_length FROM {table_name}"
-            try:
-                result = engine.execute(text(query)).scalar()
-                max_values[column] = result
-            except SQLAlchemyError as e:
-                print(f"Error executing query: {e}")
-                max_values[column] = None
-        return max_values
+    max_values = {}
+    for column in schema.keys():
+        query = f"SELECT MAX({column}) as max_value FROM {table_name}"
+        if schema[column] == "varchar":
+            query = f"SELECT MAX(length({column})) as max_length FROM {table_name}"
+        try:
+            result = engine.execute(text(query)).scalar()
+            max_values[column] = result
+        except SQLAlchemyError as e:
+            print(f"Error executing query: {e}")
+            max_values[column] = None
+    return max_values
 
 def get_table_schema_and_max_values(trino: sqlalchemy.engine.Engine, table_name ):
-   
     # Reflect the table from the database
     schema = get_schema(trino,table_name)
 

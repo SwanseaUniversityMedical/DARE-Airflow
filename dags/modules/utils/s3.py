@@ -3,12 +3,22 @@ import json
 import logging
 import boto3
 from minio import Minio
-#from minio.error import ResponseError
+# from minio.error import ResponseError
 import s3fs
 from airflow.hooks.base import BaseHook
 from botocore.config import Config
 
 logger = logging.getLogger(__name__)
+
+
+def detect_if_secure_endpoint(endpoint_url: str) -> bool:
+    https_re = r'^https://'
+
+    if re.match(https_re, endpoint_url):
+        return True
+
+    return False
+
 
 def get_conn_details(conn_id) -> dict:
     """Gets S3 connection info from Airflow connection with given connection id
@@ -23,8 +33,10 @@ def get_conn_details(conn_id) -> dict:
         logger.critical("There is no Airflow connection configured with the name {0}.".format(conn_id))
         raise e
     # Transform connection object into dictionary to make it easier to share between modules
-    s3_conn = {"endpoint_url": conn_extra["endpoint_url"], "aws_access_key_id": conn.login, "aws_secret_access_key": conn.password}
+    s3_conn = {"endpoint_url": conn_extra["endpoint_url"], "aws_access_key_id": conn.login,
+               "aws_secret_access_key": conn.password}
     return s3_conn
+
 
 def validate_s3_key(key):
     # Validate the s3 key is strictly one or more slash separated keys
@@ -51,19 +63,17 @@ def s3_get_resource(conn_id: str):
 
 
 def s3_get_fs(conn_id):
-
     s3_conn = get_conn_details(conn_id)
 
     return s3fs.S3FileSystem(
         endpoint_url=s3_conn["endpoint_url"],
         key=s3_conn["aws_access_key_id"],
         secret=s3_conn["aws_secret_access_key"],
-        use_ssl=False
+        use_ssl=detect_if_secure_endpoint(s3_conn["endpoint_url"])
     )
 
 
 def s3_copy(conn_id: str, src_bucket, dst_bucket, src_key, dst_key, move=False):
-
     s3 = s3_get_resource(conn_id)
 
     s3.Bucket(dst_bucket).copy({'Bucket': src_bucket, 'Key': src_key}, dst_key)
@@ -73,7 +83,6 @@ def s3_copy(conn_id: str, src_bucket, dst_bucket, src_key, dst_key, move=False):
 
 
 def s3_delete(conn_id: str, bucket, key):
-
     s3_get_resource(conn_id).Object(bucket, key).delete()
 
 
@@ -84,22 +93,19 @@ def s3_create_bucket(conn_id: str, bucket):
         print(f"An error occurred while creating the S3 bucket: {e}")
 
 
-
 def s3_download_minio(conn_id, bucket_name, object_name, local_file_path):
-
     s3_conn = get_conn_details(conn_id)
 
-    url = str(s3_conn["endpoint_url"]).replace('http://','').replace('https://','')
+    url = str(s3_conn["endpoint_url"]).replace('http://', '').replace('https://', '')
 
     client = Minio(url,
-               access_key=s3_conn["aws_access_key_id"],
-               secret_key=s3_conn["aws_secret_access_key"],
-               secure=False)
-    
-    
-    #client.fget_object(bucket_name, object_name, local_file_path)
-    
-    #try:
+                   access_key=s3_conn["aws_access_key_id"],
+                   secret_key=s3_conn["aws_secret_access_key"],
+                   secure=detect_if_secure_endpoint(s3_conn["endpoint_url"]))
+
+    # client.fget_object(bucket_name, object_name, local_file_path)
+
+    # try:
     # Start a multipart download
     response = client.get_object(
         bucket_name,
@@ -115,12 +121,11 @@ def s3_download_minio(conn_id, bucket_name, object_name, local_file_path):
 
     print("Download successful!")
 
-    #except ResponseError as err:
+    # except ResponseError as err:
     #    print(err)
 
 
 def s3_download(conn_id, bucket_name, object_name, local_file_path):
-
     s3_conn = get_conn_details(conn_id)
 
     client = boto3.client(
@@ -128,14 +133,13 @@ def s3_download(conn_id, bucket_name, object_name, local_file_path):
         endpoint_url=s3_conn["endpoint_url"],
         aws_access_key_id=s3_conn["aws_access_key_id"],
         aws_secret_access_key=s3_conn["aws_secret_access_key"],
-        use_ssl=False )
+        use_ssl=detect_if_secure_endpoint(s3_conn["endpoint_url"]))
 
     with open(local_file_path, 'wb') as f:
         client.download_fileobj(bucket_name, object_name, f)
 
 
 def s3_upload(conn_id, src_file, bucket, object_name):
-
     s3_conn = get_conn_details(conn_id)
 
     client = boto3.client(
@@ -143,7 +147,6 @@ def s3_upload(conn_id, src_file, bucket, object_name):
         endpoint_url=s3_conn["endpoint_url"],
         aws_access_key_id=s3_conn["aws_access_key_id"],
         aws_secret_access_key=s3_conn["aws_secret_access_key"],
-        use_ssl=False )
+        use_ssl=detect_if_secure_endpoint(s3_conn["endpoint_url"]))
 
-    client.upload_file(src_file,bucket,object_name)
-    
+    client.upload_file(src_file, bucket, object_name)

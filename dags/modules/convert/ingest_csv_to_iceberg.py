@@ -1,9 +1,9 @@
 
 import dags.constants
 from dags.modules.databases.duckdb import file_csv_to_parquet
-from dags.modules.databases.trino import create_schema, drop_table, get_trino_conn_details, get_trino_engine, hive_create_table_from_parquet, iceberg_create_table_from_hive, validate_identifier, validate_s3_key, get_table_schema_and_max_values
+from dags.modules.databases.trinohelper import create_schema, drop_table, get_trino_conn_details, get_trino_engine, hive_create_table_from_parquet, iceberg_create_table_from_hive, validate_identifier, validate_s3_key, get_table_schema_and_max_values
 from dags.modules.utils.rabbit import send_message_to_rabbitmq
-from dags.modules.utils.s3 import s3_create_bucket, s3_delete, s3_download_minio, s3_upload
+from dags.modules.utils.s3 import s3_create_bucket, s3_delete, s3_download_minio, s3_upload, detect_if_secure_endpoint, get_conn_details
 from dags.modules.utils.tracking_timer import tracking_timer,  tracking_data, tracking_data_str
 
 import constants
@@ -297,13 +297,13 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
     x=tracking_timer(p_conn, etag, "s_schema")
 
     logging.info("Getting schema from the new PAR file")
-    s3_conn = json.loads(BaseHook.get_connection("s3_conn").get_extra())
+    s3_conn = get_conn_details("s3_conn")
 
     fs = s3fs.S3FileSystem(
         endpoint_url=s3_conn["endpoint_url"],
         key=s3_conn["aws_access_key_id"],
         secret=s3_conn["aws_secret_access_key"],
-        use_ssl=False
+        use_ssl=detect_if_secure_endpoint(s3_conn["endpoint_url"])
     )
 
     with fs.open(F"s3://{hive_bucket}/{hive_key}", "rb") as fp:
