@@ -41,7 +41,7 @@ with DAG(
         message_json = json.loads(message)
         bucket = message_json["bucket"]
         key = message_json["key"]
-        etag = message_json["etag"]
+        etag = message_json["etag"].replace("-","__")
 
         logging.info(f'message parts = bucket: {bucket}, key: {key}, etag: {etag}')
 
