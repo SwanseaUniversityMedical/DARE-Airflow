@@ -203,7 +203,7 @@ services:
       MYSQL_USER: admin
       MYSQL_PASSWORD: admin
       MYSQL_DATABASE: metastore_db
-    command: ' --max_allowed_packet=67108864'
+    command: ' --max_allowed_packet=67108864 --max_connections=2000 '
     volumes:
       - mariddbdata:/var/lib/mysql
     networks:
