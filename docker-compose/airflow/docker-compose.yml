@@ -62,6 +62,8 @@ x-airflow-common:
       condition: service_healthy
     postgres:
       condition: service_healthy
+    pgtracking:
+      condition: service_healthy
 
 services:
   postgres:
@@ -71,7 +73,7 @@ services:
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     ports:
-      - 5432:5432
+      - 5433:5432
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
     healthcheck:
@@ -79,6 +81,25 @@ services:
       interval: 5s
       retries: 5
     restart: always
+
+
+  pgtracking:
+    image: postgres:13
+    container_name: pgtracking
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres-db-volume2:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+    restart: always
+
 
   adminer:
     image: adminer
@@ -163,3 +184,4 @@ services:
 
 volumes:
   postgres-db-volume:
+  postgres-db-volume2:
