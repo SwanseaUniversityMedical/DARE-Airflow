@@ -18,8 +18,8 @@ def escape_dataset(dataset):
 def validate_identifier(identifier):
     # Validate the identifier is strictly one or more dot separated identifiers
     assert re.match(
-        r'^(?:[a-z](?:[_a-z0-9]*[a-z0-9]|[a-z0-9]*)'
-        r'(?:\.[a-z](?:[_a-z0-9]*[a-z0-9]|[a-z0-9]*)))*$',
+        r'^(?:[a-z](?:[_a-z0-9]*[a-z0-9]|[a-z0-9]*))'
+        r'(?:\.[a-z0-9](?:[_a-z0-9]*[a-z0-9]|[a-z0-9]*))*$',
         identifier,
         flags=re.IGNORECASE
     )

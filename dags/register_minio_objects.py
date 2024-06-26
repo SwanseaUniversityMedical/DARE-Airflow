@@ -2,6 +2,7 @@ import datetime
 import logging
 import pendulum
 import psycopg2
+import constants
 from airflow import DAG
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.operators.postgres_operator import PostgresOperator
@@ -12,8 +13,8 @@ from modules.providers.operators.rabbitmq import RabbitMQPythonOperator
 from modules.utils.minioevent import unpack_minio_event
 
 with DAG(
-    dag_id="register_minio_objects",
-    schedule=None,
+    dag_id="DLM_register_minio_objects",
+    schedule="@once",
     start_date=pendulum.datetime(1900, 1, 1, tz="UTC"),
     catchup=True,
     max_active_runs=1,
@@ -28,8 +29,7 @@ with DAG(
         logging.info("Processing message!")
         logging.info(f"message={message}")
 
-        event = unpack_minio_event(message)
-        logging.info(f"event={event}")
+        bucket, key, etag = unpack_minio_event(message)
 
         # Register eTag in postgres if not already there
 
@@ -44,11 +44,10 @@ with DAG(
             port=postgres_conn.port
         )
         cur = conn.cursor()
+        
+        logging.info(f"register adding eTag = {etag}")
 
-        value_to_insert = event["etag"]
-        logging.info(f"register adding eTag = {value_to_insert}")
-
-        sql = f"INSERT INTO register (etag) SELECT '{value_to_insert}'  WHERE NOT EXISTS (SELECT 1 FROM register WHERE etag = '{value_to_insert}' )"
+        sql = f"INSERT INTO register (etag) SELECT '{etag}'  WHERE NOT EXISTS (SELECT 1 FROM register WHERE etag = '{etag}' )"
         cur.execute(sql)
         conn.commit()
         cur.close()
@@ -58,7 +57,7 @@ with DAG(
         func=process_event,
         task_id="consume_events",
         rabbitmq_conn_id="rabbitmq_conn",
-        queue_name="afregister",
+        queue_name=constants.rabbitmq_queue_minio_register,
         deferrable=datetime.timedelta(seconds=120),
         poke_interval=datetime.timedelta(seconds=1),
         retry_delay=datetime.timedelta(seconds=10),
@@ -70,7 +69,7 @@ with DAG(
         postgres_conn_id='pg_conn',
         sql='''
         CREATE TABLE IF NOT EXISTS register (
-            etag VARCHAR(50)
+            etag VARCHAR(100)
         );
         ''',
         dag=dag,
