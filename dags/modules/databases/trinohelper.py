@@ -62,7 +62,7 @@ def get_trino_engine(trino_conn_details: dict) -> sqlalchemy.engine.Engine:
     logger.info(f"database={database}")
 
     #SIMON: hack for now
-    if connect_protocol = "https":
+    if connect_protocol == "https":
         engine = create_engine(
             f"trino://{username}:{password}@{host}:{port}/{database}",
             connect_args={
@@ -71,7 +71,7 @@ def get_trino_engine(trino_conn_details: dict) -> sqlalchemy.engine.Engine:
                 # TODO This needs to be set to true when deploying to anything thats not dev
                 "verify": False
             },
-            echo=True
+            echo=True)
     else:
             #no auth possible with HTTP
             engine = create_engine(
