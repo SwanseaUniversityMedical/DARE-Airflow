@@ -61,15 +61,27 @@ def get_trino_engine(trino_conn_details: dict) -> sqlalchemy.engine.Engine:
     logger.info(f"port={port}")
     logger.info(f"database={database}")
 
-    engine = create_engine(
-        f"trino://{username}:{password}@{host}:{port}/{database}",
-        connect_args={
-    #        "auth": BasicAuthentication(username, password),
-            "http_scheme": connect_protocol,
-            # TODO This needs to be set to true when deploying to anything thats not dev
-            "verify": False
-        },
-        echo=True
+    #SIMON: hack for now
+    if connect_protocol = "https":
+        engine = create_engine(
+            f"trino://{username}:{password}@{host}:{port}/{database}",
+            connect_args={
+                "auth": BasicAuthentication(username, password),
+                "http_scheme": connect_protocol,
+                # TODO This needs to be set to true when deploying to anything thats not dev
+                "verify": False
+            },
+            echo=True
+    else:
+            #no auth possible with HTTP
+            engine = create_engine(
+            f"trino://{username}@{host}:{port}/{database}",
+            connect_args={
+                "http_scheme": connect_protocol,
+                # TODO This needs to be set to true when deploying to anything thats not dev
+                "verify": False
+            },
+            echo=True
     )
 
     return engine
