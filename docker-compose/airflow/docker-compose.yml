@@ -89,7 +89,7 @@ services:
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
+      POSTGRES_DB: tracking
     ports:
       - 5432:5432
     volumes:
