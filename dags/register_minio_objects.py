@@ -29,7 +29,7 @@ with DAG(
         logging.info("Processing message!")
         logging.info(f"message={message}")
 
-        bucket, key, etag, size = unpack_minio_event(message)
+        bucket, key, etag, objsize = unpack_minio_event(message)
 
         # Register eTag in postgres if not already there
 
@@ -62,7 +62,7 @@ with DAG(
 
         sql = '''               
         INSERT INTO loadingbay (key,etag,objsize,deleted,folder,filename,extension) 
-        SELECT '{key}','{etag}','{size}',false,'{folder}','{filename}','{extension}'
+        SELECT '{key}','{etag}',0{objsize},false,'{folder}','{filename}','{extension}'
         WHERE NOT EXISTS (SELECT 1 FROM loadingbay WHERE etag = '{etag}' );
         '''
         cur = conn.cursor()        
@@ -102,7 +102,7 @@ with DAG(
     )
 
     create_main_table_task = PostgresOperator(
-        task_id='create_register_table',
+        task_id='create_maintable',
         postgres_conn_id='pg_conn',
         sql='''               
         CREATE TABLE IF NOT EXISTS loadingbay (
