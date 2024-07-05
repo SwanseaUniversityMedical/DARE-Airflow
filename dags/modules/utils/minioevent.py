@@ -8,8 +8,9 @@ def unpack_minio_event(message):
     s3_object = records["s3"]["object"]
     etag = s3_object["eTag"]
     key = s3_object["key"]
+    size = s3_object["size"]
 
-    return bucket, key, etag
+    return bucket, key, etag, size
 
 
 def decode_minio_event(bucket, key, etag):

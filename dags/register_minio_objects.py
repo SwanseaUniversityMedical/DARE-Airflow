@@ -10,7 +10,7 @@ from airflow.utils.trigger_rule import TriggerRule
 from airflow.hooks.base import BaseHook
 
 from modules.providers.operators.rabbitmq import RabbitMQPythonOperator
-from modules.utils.minioevent import unpack_minio_event
+from modules.utils.minioevent import unpack_minio_event, decode_minio_event
 
 with DAG(
     dag_id="DLM_register_minio_objects",
@@ -29,7 +29,7 @@ with DAG(
         logging.info("Processing message!")
         logging.info(f"message={message}")
 
-        bucket, key, etag = unpack_minio_event(message)
+        bucket, key, etag, size = unpack_minio_event(message)
 
         # Register eTag in postgres if not already there
 
@@ -51,7 +51,33 @@ with DAG(
         cur.execute(sql)
         conn.commit()
         cur.close()
+        
+        # Register the file
+        obj = decode_minio_event(bucket, key, etag)
+        folder = obj['head_path']
+        filename = obj['filename']
+        extension = obj['extension']
+
+        logging.info(f"register object = {etag}")
+
+        sql = '''               
+        INSERT INTO loadingbay (key,etag,objsize,deleted,folder,filename,extension) 
+        SELECT '{key}','{etag}','{size}',false,'{folder}','{filename}','{extension}'
+        WHERE NOT EXISTS (SELECT 1 FROM loadingbay WHERE etag = '{etag}' );
+        '''
+        cur = conn.cursor()        
+        cur.execute(sql)
+        conn.commit()
+        cur.close()
+
+        sql2 = '''UPDATE loadingbay set updated=NOW() WHERE etag = '{etag}' '''
+        cur = conn.cursor()        
+        cur.execute(sql2)
+        conn.commit()
+        cur.close()
+
         conn.close()
+
 
     consume_events = RabbitMQPythonOperator(
         func=process_event,
@@ -75,6 +101,26 @@ with DAG(
         dag=dag,
     )
 
+    create_main_table_task = PostgresOperator(
+        task_id='create_register_table',
+        postgres_conn_id='pg_conn',
+        sql='''               
+        CREATE TABLE IF NOT EXISTS loadingbay (
+            id bigserial, 
+            updated timestamp,
+            key VARCHAR(350), 
+            etag VARCHAR(100), 
+            objsize NUMERIC,
+            deleted boolean,
+            deletedDate timestamp,
+            folder VARCHAR(600), 
+            filename VARCHAR(150), 
+            extension VARCHAR(50)            
+        );
+        ''',
+        dag=dag,
+    )
+
     # If the consumer task fails and isn't restarted, restart the whole DAG
     restart_dag = TriggerDagRunOperator(
         task_id="restart_dag",
@@ -82,4 +128,4 @@ with DAG(
         trigger_rule=TriggerRule.ALL_DONE
     )
 
-    create_register_table_task >> consume_events >> restart_dag
+    create_register_table_task >> create_main_table_task >> consume_events >> restart_dag
