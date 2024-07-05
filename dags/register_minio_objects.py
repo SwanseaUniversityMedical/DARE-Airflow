@@ -57,20 +57,20 @@ with DAG(
         folder = obj['head_path']
         filename = obj['filename']
         extension = obj['extension']
-
+        tidykey = extension = obj['src_file_path']
+        
         logging.info(f"register object = {etag}")
 
-        sql = '''               
-        INSERT INTO loadingbay (key,etag,objsize,deleted,folder,filename,extension) 
-        SELECT '{key}','{etag}',0{objsize},false,'{folder}','{filename}','{extension}'
-        WHERE NOT EXISTS (SELECT 1 FROM loadingbay WHERE etag = '{etag}' );
-        '''
+        logging.info(f"obj size = {objsize}")
+
+        sql = f"INSERT INTO loadingbay (key,etag,objsize,deleted,folder,filename,extension)  SELECT '{tidykey}','{etag}',{objsize},false,'{folder}','{filename}','{extension}' WHERE NOT EXISTS (SELECT 1 FROM loadingbay WHERE etag = '{etag}' );"
+        
         cur = conn.cursor()        
         cur.execute(sql)
         conn.commit()
         cur.close()
 
-        sql2 = '''UPDATE loadingbay set updated=NOW() WHERE etag = '{etag}' '''
+        sql2 = f"UPDATE loadingbay set updated=NOW() WHERE etag = '{etag}'"
         cur = conn.cursor()        
         cur.execute(sql2)
         conn.commit()

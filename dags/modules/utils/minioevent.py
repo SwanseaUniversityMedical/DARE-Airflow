@@ -20,8 +20,7 @@ def decode_minio_event(bucket, key, etag):
     extension = src_file_path.split("/")[-1].split(".")[1].lower()
     file_name = src_file_path.replace(extension, "")
     dir_name = paths[0]
-    full_file_path = key
-    head_path = '/'.join(full_file_path.split('/')[:-1])
+    head_path = '/'.join(src_file_path.split('/')[:-1])
     filename = src_file_path.split("/")[-1].split(".")[0]
 
     version ='1'
@@ -37,7 +36,6 @@ def decode_minio_event(bucket, key, etag):
         extension=extension,
         file_name=file_name,
         dir_name=dir_name,
-        full_file_path=full_file_path,
         head_path=head_path,
         filename=filename,
         version=version,
