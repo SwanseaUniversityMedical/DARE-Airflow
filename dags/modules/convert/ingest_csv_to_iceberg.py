@@ -371,9 +371,18 @@ def ingest_csv_to_iceberg(dataset, tablename, version, label, etag, ingest_bucke
 
         
         # iceberg_table.replace(iceberg_schema+'.',"")
-        test = get_table_schema_and_max_values(trino,iceberg_table)
-        logging.info("*****SIMON - temp print schema for schema compare")
-        logging.info(test)
+        schema = get_table_schema_and_max_values(trino,iceberg_table)
+        schemarequest = {
+            'schema': schema,
+            'dataset': dataset,
+            'version': version,
+            'label': label
+        }
+        logging.info(f"Schema Compare request = {schemarequest}")
+        # send to rabbit
+        send_message_to_rabbitmq('rabbitmq_conn',constants.rabbitmq_exchange_schema, 
+                                 constants.rabbitmq_queue_schema_request_key,schemarequest)
+
 
     finally:
         if debug:

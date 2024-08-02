@@ -127,10 +127,17 @@
          "durable":true,
          "auto_delete":false,
          "internal":false,
-         "arguments":{
-            
-         }
-      }
+         "arguments":{}
+       },
+       {
+         "name":"schemarequest",
+         "vhost":"/",
+         "type":"fanout",
+         "durable":true,
+         "auto_delete":false,
+         "internal":false,
+         "arguments":{}
+       }
     ],
     "bindings":[
        {
@@ -189,6 +196,16 @@
          "destination":"audit_iceberg",
          "destination_type":"queue",
          "routing_key":"iceberg",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"schemarequest",
+         "vhost":"/",
+         "destination":"requestschema",
+         "destination_type":"queue",
+         "routing_key":"request",
          "arguments":{
             
          }

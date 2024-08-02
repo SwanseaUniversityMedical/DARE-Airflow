@@ -10,6 +10,9 @@ rabbitmq_exchange_notify_key_s3file='s3'
 rabbitmq_exchange_notify_key_trino='hive'
 rabbitmq_exchange_notify_key_trino_iceberg='iceberg'
 
+rabbitmq_exchange_schema='schemarequest'
+rabbitmq_queue_schema_request_key='request'
+
 redis_expiry = 30
 
 assets3_url = 'https://cat-hdp.demo.ukserp.ac.uk/doc/GetFilteredData2?profile=dlm&Filter=%22Dataset='
