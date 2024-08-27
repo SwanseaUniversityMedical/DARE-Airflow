@@ -193,6 +193,23 @@ services:
     networks:
       - miniotrino
 
+  trino-worker:
+    image: 'trinodb/trino:438'
+    hostname: trino-worker
+    depends_on:
+      nginx:
+          condition: service_started
+      hive-metastore:
+          condition: service_started
+      trino-coordinator:
+          condition: service_started
+    ports:
+      - '8091:8080'
+    volumes:
+      - ./etc2:/etc/trino
+    networks:
+      - miniotrino
+      
 #  mariadb:
 #    image: 'mariadb:lts'
 #    hostname: mariadb
