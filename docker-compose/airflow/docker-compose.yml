@@ -54,6 +54,7 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
     #AIRFLOW__LOGGING__LOGGING_LEVEL: DEBUG
+    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: 2
   volumes:
     #- ../../dags:/opt/airflow/dags
 #    - ../../../DLM-Dags/dags:/opt/airflow/dags
