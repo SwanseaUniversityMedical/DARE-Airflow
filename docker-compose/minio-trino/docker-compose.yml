@@ -179,7 +179,7 @@ services:
       retries: 3
 
   trino-coordinator:
-    image: 'trinodb/trino:438'
+    image: 'trinodb/trino:450'
     hostname: trino-coordinator
     depends_on:
       nginx:
@@ -189,12 +189,13 @@ services:
     ports:
       - '8090:8080'
     volumes:
-      - ./etc:/etc/trino
+      #- ./etc:/etc/trino
+      - ./etc/catalog:/etc/trino/catalog:ro
     networks:
       - miniotrino
 
   trino-worker:
-    image: 'trinodb/trino:438'
+    image: 'trinodb/trino:450'
     hostname: trino-worker
     depends_on:
       nginx:
@@ -206,7 +207,8 @@ services:
     ports:
       - '8091:8080'
     volumes:
-      - ./etc2:/etc/trino
+      - ./etc/catalog:/etc/trino/catalog:ro
+      - ./etc2/config.properties:/etc/trino/config.properties
     networks:
       - miniotrino
       
