@@ -1,3 +1,3 @@
 git pull
-cp all-down.sh | sh
-cp all-up.sh | sh
+cat all-down.sh | sh
+cat all-up.sh | sh
