@@ -115,6 +115,15 @@
          }
       },
       {
+         "name":"portal_details",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
          "name":"portal_update",
          "vhost":"/",
          "durable":true,
@@ -233,6 +242,16 @@
          "destination":"portal_update",
          "destination_type":"queue",
          "routing_key":"update",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"notify",
+         "vhost":"/",
+         "destination":"portal_details",
+         "destination_type":"queue",
+         "routing_key":"details",
          "arguments":{
             
          }
