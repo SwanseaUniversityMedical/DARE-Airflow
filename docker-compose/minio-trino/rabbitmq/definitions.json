@@ -52,6 +52,15 @@
          }
       },
       {
+         "name":"portalload",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
          "name":"afobjectload",
          "vhost":"/",
          "durable":true,
@@ -62,6 +71,15 @@
       },
       {
          "name":"afregister",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
+         "name":"requestschema",
          "vhost":"/",
          "durable":true,
          "auto_delete":false,
@@ -89,6 +107,15 @@
       },
       {
          "name":"audit_iceberg",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
+         "name":"portal_update",
          "vhost":"/",
          "durable":true,
          "auto_delete":false,
@@ -123,14 +150,14 @@
        {
          "name":"notify",
          "vhost":"/",
-         "type":"fanout",
+         "type":"topic",
          "durable":true,
          "auto_delete":false,
          "internal":false,
          "arguments":{}
        },
        {
-         "name":"schemarequest",
+         "name":"schema",
          "vhost":"/",
          "type":"fanout",
          "durable":true,
@@ -201,7 +228,17 @@
          }
       },
       {
-         "source":"schemarequest",
+         "source":"notify",
+         "vhost":"/",
+         "destination":"portal_update",
+         "destination_type":"queue",
+         "routing_key":"update",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"schema",
          "vhost":"/",
          "destination":"requestschema",
          "destination_type":"queue",
