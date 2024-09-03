@@ -79,7 +79,7 @@
          }
       },
       {
-         "name":"requestschema",
+         "name":"request_schema",
          "vhost":"/",
          "durable":true,
          "auto_delete":false,
@@ -259,7 +259,7 @@
       {
          "source":"schema",
          "vhost":"/",
-         "destination":"requestschema",
+         "destination":"request_schema",
          "destination_type":"queue",
          "routing_key":"request",
          "arguments":{
