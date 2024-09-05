@@ -131,6 +131,15 @@
          "arguments":{
             
          }
+      },
+      {
+         "name":"return_schema",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
       }
     ],
     "exchanges":[
@@ -167,6 +176,15 @@
        },
        {
          "name":"schema",
+         "vhost":"/",
+         "type":"fanout",
+         "durable":true,
+         "auto_delete":false,
+         "internal":false,
+         "arguments":{}
+       },
+       {
+         "name":"schemaOutput",
          "vhost":"/",
          "type":"fanout",
          "durable":true,
@@ -264,6 +282,15 @@
          "routing_key":"request",
          "arguments":{
             
+         }
+      },
+      {
+         "source":"schemaOutput",
+         "vhost":"/",
+         "destination":"return_schema",
+         "destination_type":"queue",
+         "routing_key":"request",
+         "arguments":{
          }
       }
     ]
