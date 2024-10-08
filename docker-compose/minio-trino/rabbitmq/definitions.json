@@ -87,6 +87,15 @@
             
          }
       },
+	  {
+         "name":"request_schema_save",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
       {
          "name":"audit_raw",
          "vhost":"/",
@@ -131,6 +140,15 @@
          "arguments":{
             
          }
+      },
+      {
+         "name":"return_schema",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
       }
     ],
     "exchanges":[
@@ -167,6 +185,15 @@
        },
        {
          "name":"schema",
+         "vhost":"/",
+         "type":"fanout",
+         "durable":true,
+         "auto_delete":false,
+         "internal":false,
+         "arguments":{}
+       },
+       {
+         "name":"schemaOutput",
          "vhost":"/",
          "type":"fanout",
          "durable":true,
@@ -261,9 +288,28 @@
          "vhost":"/",
          "destination":"request_schema",
          "destination_type":"queue",
-         "routing_key":"request",
+         "routing_key":"",
          "arguments":{
             
+         }
+      },
+	  {
+         "source":"schema",
+         "vhost":"/",
+         "destination":"request_schema_save",
+         "destination_type":"queue",
+         "routing_key":"",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"schemaOutput",
+         "vhost":"/",
+         "destination":"return_schema",
+         "destination_type":"queue",
+         "routing_key":"request",
+         "arguments":{
          }
       }
     ]
