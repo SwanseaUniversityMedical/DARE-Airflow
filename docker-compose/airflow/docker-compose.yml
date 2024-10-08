@@ -87,7 +87,23 @@ services:
       retries: 5
     restart: always
 
-
+  pgnrdva:
+    image: postgres:13
+    container_name: pgtracking
+    environment:
+      POSTGRES_USER: nrda
+      POSTGRES_PASSWORD: nrda
+      POSTGRES_DB: nrda
+    ports:
+      - 5434:5432
+    volumes:
+      - postgres-db-volume3:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+    restart: always
+    
   pgtracking:
     image: postgres:13
     container_name: pgtracking
@@ -190,3 +206,4 @@ services:
 volumes:
   postgres-db-volume:
   postgres-db-volume2:
+  postgres-db-volume3:
