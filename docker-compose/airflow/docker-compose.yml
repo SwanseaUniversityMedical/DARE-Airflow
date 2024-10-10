@@ -106,7 +106,7 @@ services:
     
   pgtracking:
     image: postgres:13
-    container_name: pgtracking
+    container_name: pgtracking2
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
