@@ -149,7 +149,16 @@
          "arguments":{
             
          }
-      }
+      },
+      {
+         "name":"ledger",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      } 
     ],
     "exchanges":[
        {
@@ -194,6 +203,15 @@
        },
        {
          "name":"schemaOutput",
+         "vhost":"/",
+         "type":"fanout",
+         "durable":true,
+         "auto_delete":false,
+         "internal":false,
+         "arguments":{}
+       },
+       {
+         "name":"ledgerIn",
          "vhost":"/",
          "type":"fanout",
          "durable":true,
@@ -307,6 +325,15 @@
          "source":"schemaOutput",
          "vhost":"/",
          "destination":"return_schema",
+         "destination_type":"queue",
+         "routing_key":"request",
+         "arguments":{
+         }
+      },
+      {
+         "source":"ledgerIn",
+         "vhost":"/",
+         "destination":"ledger",
          "destination_type":"queue",
          "routing_key":"request",
          "arguments":{
