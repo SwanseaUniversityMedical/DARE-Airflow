@@ -94,6 +94,7 @@ services:
       POSTGRES_USER: nrda
       POSTGRES_PASSWORD: nrda
       POSTGRES_DB: nrda
+      PG_MAX_CONNECTIONS: 100
     ports:
       - 5434:5432
     volumes:
