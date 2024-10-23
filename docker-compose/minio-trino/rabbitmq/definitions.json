@@ -43,16 +43,25 @@
     ],
     "queues":[
        {
-          "name":"airflow",
-          "vhost":"/",
-          "durable":true,
-          "auto_delete":false,
-          "arguments":{
-             
-          }
-       },
-       {
          "name":"afload",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
+         "name":"portalload",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
+         "name":"afobjectload",
          "vhost":"/",
          "durable":true,
          "auto_delete":false,
@@ -68,7 +77,97 @@
          "arguments":{
             
          }
-      }
+      },
+      {
+         "name":"request_schema",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+	  {
+         "name":"request_schema_save",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
+         "name":"audit_raw",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
+         "name":"audit_trino",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
+         "name":"audit_iceberg",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
+         "name":"portal_details",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
+         "name":"portal_update",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
+         "name":"return_schema",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+      {
+         "name":"ledger",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         }
+      },
+	  {
+		 "name":"schemaWithDataSetID",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         } 
+	  }
     ],
     "exchanges":[
        {
@@ -81,6 +180,62 @@
           "arguments":{
              
           }
+       },
+       {
+         "name":"load",
+         "vhost":"/",
+         "type":"fanout",
+         "durable":true,
+         "auto_delete":false,
+         "internal":false,
+         "arguments":{
+            
+         }
+      },
+       {
+         "name":"notify",
+         "vhost":"/",
+         "type":"topic",
+         "durable":true,
+         "auto_delete":false,
+         "internal":false,
+         "arguments":{}
+       },
+       {
+         "name":"schema",
+         "vhost":"/",
+         "type":"fanout",
+         "durable":true,
+         "auto_delete":false,
+         "internal":false,
+         "arguments":{}
+       },
+       {
+         "name":"schemaOutput",
+         "vhost":"/",
+         "type":"fanout",
+         "durable":true,
+         "auto_delete":false,
+         "internal":false,
+         "arguments":{}
+       },
+       {
+         "name":"ledgerIn",
+         "vhost":"/",
+         "type":"fanout",
+         "durable":true,
+         "auto_delete":false,
+         "internal":false,
+         "arguments":{}
+       },
+       {
+         "name":"InSchemaWithDataSetID",
+         "vhost":"/",
+         "type":"fanout",
+         "durable":true,
+         "auto_delete":false,
+         "internal":false,
+         "arguments":{}
        }
     ],
     "bindings":[
@@ -105,13 +260,110 @@
          }
       },
       {
-         "source":"minio",
+         "source":"notify",
          "vhost":"/",
-         "destination":"airflow",
+         "destination":"audit_raw",
+         "destination_type":"queue",
+         "routing_key":"s3",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"load",
+         "vhost":"/",
+         "destination":"afobjectload",
+         "destination_type":"queue",
+         "routing_key":"s3",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"notify",
+         "vhost":"/",
+         "destination":"audit_trino",
+         "destination_type":"queue",
+         "routing_key":"hive",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"notify",
+         "vhost":"/",
+         "destination":"audit_iceberg",
+         "destination_type":"queue",
+         "routing_key":"iceberg",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"notify",
+         "vhost":"/",
+         "destination":"portal_update",
+         "destination_type":"queue",
+         "routing_key":"update",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"notify",
+         "vhost":"/",
+         "destination":"portal_details",
+         "destination_type":"queue",
+         "routing_key":"details",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"schema",
+         "vhost":"/",
+         "destination":"request_schema",
          "destination_type":"queue",
          "routing_key":"",
          "arguments":{
             
+         }
+      },
+	  {
+         "source":"schema",
+         "vhost":"/",
+         "destination":"request_schema_save",
+         "destination_type":"queue",
+         "routing_key":"",
+         "arguments":{
+            
+         }
+      },
+      {
+         "source":"schemaOutput",
+         "vhost":"/",
+         "destination":"return_schema",
+         "destination_type":"queue",
+         "routing_key":"request",
+         "arguments":{
+         }
+      },
+      {
+         "source":"ledgerIn",
+         "vhost":"/",
+         "destination":"ledger",
+         "destination_type":"queue",
+         "routing_key":"request",
+         "arguments":{
+         }
+      },
+      {
+         "source":"InSchemaWithDataSetID",
+         "vhost":"/",
+         "destination":"schemaWithDataSetID",
+         "destination_type":"queue",
+         "routing_key":"request",
+         "arguments":{
          }
       }
     ]

@@ -35,12 +35,16 @@
 #                              Default: airflow
 #
 # Feel free to modify this file to suit your needs.
----
+
 version: '3'
 x-airflow-common:
   &airflow-common
 #  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.0.2}
-  image: harbor.ukserp.ac.uk/dare/airflow/base:pr-40  #1.1.7
+#  image: harbor.ukserp.ac.uk/dare/airflow/dags:pr-73 #1.4.4
+#  image: harbor.ukserp.ac.uk/dlm/airflow/dags:1.14.1
+  #image: harbor.ukserp.ac.uk/dlm/airflow/dags:1.20.0
+   # Joss (17/10/24) fixed race conditions and bad dict keys
+  image: harbor.ukserp.ac.uk/dlm/airflow/dags:1.21.1
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
@@ -51,8 +55,13 @@ x-airflow-common:
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
+    #AIRFLOW__LOGGING__LOGGING_LEVEL: DEBUG
+    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: 1
+    AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: 1
   volumes:
-    - ../../dags:/opt/airflow/dags
+    #- ../../dags:/opt/airflow/dags
+    # Don't mount random locally cloned DAGs over the top of the container!
+    #- ../../../DLM-Dags/dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
@@ -60,6 +69,8 @@ x-airflow-common:
     redis:
       condition: service_healthy
     postgres:
+      condition: service_healthy
+    pgtracking:
       condition: service_healthy
 
 services:
@@ -70,7 +81,7 @@ services:
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     ports:
-      - 5432:5432
+      - 5433:5432
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
     healthcheck:
@@ -79,8 +90,54 @@ services:
       retries: 5
     restart: always
 
+  pgnrdva:
+    image: postgres:13
+    container_name: pgtracking
+    environment:
+      POSTGRES_USER: nrda
+      POSTGRES_PASSWORD: nrda
+      POSTGRES_DB: nrda
+      PG_MAX_CONNECTIONS: 100
+    ports:
+      - 5434:5432
+    volumes:
+      - postgres-db-volume3:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+    restart: always
+    
+  pgtracking:
+    image: postgres:13
+    container_name: pgtracking2
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: tracking
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres-db-volume2:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+    restart: always
+
+
+  adminer:
+    image: adminer
+    mem_limit: 256M
+    mem_reservation: 128M
+    cpus: 0.1
+    restart: always
+    ports:
+      - 8087:8080
+
   redis:
     image: redis:latest
+    container_name: redis
     ports:
       - 6379:6379
     healthcheck:
@@ -105,6 +162,11 @@ services:
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
+    restart: always
+
+  airflow-triggerer:
+    <<: *airflow-common
+    command: triggerer
     restart: always
 
   airflow-worker:
@@ -134,5 +196,18 @@ services:
       retries: 5
     restart: always
 
+  redis-commander:
+    container_name: redis-commander
+    hostname: redis-commander
+    image: rediscommander/redis-commander:latest
+#    build: .
+    restart: always
+    environment:
+    - REDIS_HOSTS=local:redis:6379
+    ports:
+    - 8081:8081
+
 volumes:
   postgres-db-volume:
+  postgres-db-volume2:
+  postgres-db-volume3:

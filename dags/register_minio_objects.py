@@ -2,6 +2,7 @@ import datetime
 import logging
 import pendulum
 import psycopg2
+import constants
 from airflow import DAG
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.operators.postgres_operator import PostgresOperator
@@ -9,11 +10,11 @@ from airflow.utils.trigger_rule import TriggerRule
 from airflow.hooks.base import BaseHook
 
 from modules.providers.operators.rabbitmq import RabbitMQPythonOperator
-from modules.utils.minioevent import unpack_minio_event
+from modules.utils.minioevent import unpack_minio_event, decode_minio_event
 
 with DAG(
-    dag_id="register_minio_objects",
-    schedule=None,
+    dag_id="DLM_register_minio_objects",
+    schedule="@once",
     start_date=pendulum.datetime(1900, 1, 1, tz="UTC"),
     catchup=True,
     max_active_runs=1,
@@ -28,8 +29,7 @@ with DAG(
         logging.info("Processing message!")
         logging.info(f"message={message}")
 
-        event = unpack_minio_event(message)
-        logging.info(f"event={event}")
+        bucket, key, etag, objsize = unpack_minio_event(message)
 
         # Register eTag in postgres if not already there
 
@@ -44,21 +44,44 @@ with DAG(
             port=postgres_conn.port
         )
         cur = conn.cursor()
+        
+        logging.info(f"register adding eTag = {etag}")
 
-        value_to_insert = event["etag"]
-        logging.info(f"register adding eTag = {value_to_insert}")
-
-        sql = f"INSERT INTO register (etag) SELECT '{value_to_insert}'  WHERE NOT EXISTS (SELECT 1 FROM register WHERE etag = '{value_to_insert}' )"
+        sql = f"INSERT INTO register (etag) SELECT '{etag}'  WHERE NOT EXISTS (SELECT 1 FROM register WHERE etag = '{etag}' )"
         cur.execute(sql)
         conn.commit()
         cur.close()
+        
+        # Register the file
+        obj = decode_minio_event(bucket, key, etag)
+        folder = obj['head_path']
+        filename = obj['filename']
+        extension = obj['extension']
+        tidykey = obj['src_file_path']
+        
+        logging.info(f"register object = {etag}")
+
+        sql = f"INSERT INTO loadingbay (key,etag,objsize,deleted,folder,filename,extension)  SELECT '{tidykey}','{etag}',{objsize},false,'{folder}','{filename}','{extension}' WHERE NOT EXISTS (SELECT 1 FROM loadingbay WHERE key = '{tidykey}' );"
+        
+        cur = conn.cursor()        
+        cur.execute(sql)
+        conn.commit()
+        cur.close()
+
+        sql2 = f"UPDATE loadingbay set updated=NOW() WHERE key = '{tidykey}'"
+        cur = conn.cursor()        
+        cur.execute(sql2)
+        conn.commit()
+        cur.close()
+
         conn.close()
+
 
     consume_events = RabbitMQPythonOperator(
         func=process_event,
         task_id="consume_events",
         rabbitmq_conn_id="rabbitmq_conn",
-        queue_name="afregister",
+        queue_name=constants.rabbitmq_queue_minio_register,
         deferrable=datetime.timedelta(seconds=120),
         poke_interval=datetime.timedelta(seconds=1),
         retry_delay=datetime.timedelta(seconds=10),
@@ -70,7 +93,27 @@ with DAG(
         postgres_conn_id='pg_conn',
         sql='''
         CREATE TABLE IF NOT EXISTS register (
-            etag VARCHAR(50)
+            etag VARCHAR(100)
+        );
+        ''',
+        dag=dag,
+    )
+
+    create_main_table_task = PostgresOperator(
+        task_id='create_maintable',
+        postgres_conn_id='pg_conn',
+        sql='''               
+        CREATE TABLE IF NOT EXISTS loadingbay (
+            id bigserial, 
+            updated timestamp,
+            key VARCHAR(350), 
+            etag VARCHAR(100), 
+            objsize NUMERIC,
+            deleted boolean,
+            deletedDate timestamp,
+            folder VARCHAR(600), 
+            filename VARCHAR(150), 
+            extension VARCHAR(50)            
         );
         ''',
         dag=dag,
@@ -83,4 +126,4 @@ with DAG(
         trigger_rule=TriggerRule.ALL_DONE
     )
 
-    create_register_table_task >> consume_events >> restart_dag
+    create_register_table_task >> create_main_table_task >> consume_events >> restart_dag
