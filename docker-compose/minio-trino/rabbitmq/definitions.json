@@ -158,7 +158,16 @@
          "arguments":{
             
          }
-      } 
+      },
+	  {
+		 "name":"schemaWithDataSetID",
+         "vhost":"/",
+         "durable":true,
+         "auto_delete":false,
+         "arguments":{
+            
+         } 
+	  }
     ],
     "exchanges":[
        {
@@ -212,6 +221,15 @@
        },
        {
          "name":"ledgerIn",
+         "vhost":"/",
+         "type":"fanout",
+         "durable":true,
+         "auto_delete":false,
+         "internal":false,
+         "arguments":{}
+       },
+       {
+         "name":"InSchemaWithDataSetID",
          "vhost":"/",
          "type":"fanout",
          "durable":true,
@@ -334,6 +352,15 @@
          "source":"ledgerIn",
          "vhost":"/",
          "destination":"ledger",
+         "destination_type":"queue",
+         "routing_key":"request",
+         "arguments":{
+         }
+      },
+      {
+         "source":"InSchemaWithDataSetID",
+         "vhost":"/",
+         "destination":"schemaWithDataSetID",
          "destination_type":"queue",
          "routing_key":"request",
          "arguments":{
