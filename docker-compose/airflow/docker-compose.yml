@@ -107,7 +107,7 @@ services:
       interval: 5s
       retries: 5
     restart: always
-    
+    command: postgres -c 'max_connections=1000'
   pgtracking:
     image: postgres:13
     container_name: pgtracking2
