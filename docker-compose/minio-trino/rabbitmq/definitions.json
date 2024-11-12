@@ -87,15 +87,6 @@
             
          }
       },
-	  {
-         "name":"request_schema_save",
-         "vhost":"/",
-         "durable":true,
-         "auto_delete":false,
-         "arguments":{
-            
-         }
-      },
       {
          "name":"audit_raw",
          "vhost":"/",
@@ -323,16 +314,6 @@
          "source":"schema",
          "vhost":"/",
          "destination":"request_schema",
-         "destination_type":"queue",
-         "routing_key":"",
-         "arguments":{
-            
-         }
-      },
-	  {
-         "source":"schema",
-         "vhost":"/",
-         "destination":"request_schema_save",
          "destination_type":"queue",
          "routing_key":"",
          "arguments":{
