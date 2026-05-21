@@ -40,7 +40,7 @@ jobs:
   # Job name must be unique across repo to target
   # branch protection rules "required checks" properly!
   dags-container:
-    uses: SwanseaUniversityMedical/workflows/.github/workflows/pr-and-release-container.yaml@v1.8.1-containers
+    uses: SwanseaUniversityMedical/workflows/.github/workflows/pr-and-release-container.yaml@v4.0.0-containers
     with:
       job-name: dags-container
       registry: ${{ vars.HARBOR_REGISTRY }}
@@ -52,12 +52,11 @@ jobs:
           'maintenance/dags-container/[0-9]+\.([0-9]+|x)\.x',
           'main'
         ]
-      cosign-public-key: ${{ vars.COSIGN_PUBLIC_KEY }}
+      notation-cert: ${{ vars.NOTATION_CERT }}
       slack-channel: ${{ vars.SLACK_CHANNEL }}
       build-file: containers/dags/Dockerfile
       build-context: .
     secrets:
-      cosign-private-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
-      cosign-password: ${{ secrets.COSIGN_PASSWORD }}
+      notation-key: ${{ secrets.NOTATION_KEY }}
       registry-token: ${{ secrets.HARBOR_TOKEN }}
       slack-token: ${{ secrets.SLACK_TOKEN }}
